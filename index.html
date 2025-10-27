@@ -3,292 +3,325 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Booha Adventure: Year One</title>
+<title>Booha Overworld – Year One</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+JP:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0b1530;       /* deep navy */
-  --ink:#ffffff;      /* text */
-  --muted:#94a3b8;    /* slate */
-  --gold:#ffd400;     /* booha yellow core */
-  --gold-soft:#fff87a;/* soft highlight */
-  --outline:#ffffff22;/* subtle borders */
+  --bg:#0b1530;        /* deep navy */
+  --ink:#eef2ff;       /* text */
+  --muted:#93a3c2;     /* slate */
+  --gold:#ffd400;      /* booha yellow core */
+  --gold-soft:#fff87a; /* soft highlight */
+  --aqua:#65e7ff;      /* visited glow */
+  --locked:#223055;    /* locked nodes */
   --radius:22px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{font-family:system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"; background:var(--bg); color:var(--ink);}
+body{font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", Helvetica, Arial; background:var(--bg); color:var(--ink);}
 
-/* --------- Layout --------- */
-.wrapper{min-height:100%;display:flex;flex-direction:column}
-.header{padding:20px 16px 10px;text-align:center}
-.header h1{font-family:Cinzel,serif;letter-spacing:.5px;font-weight:900;font-size:clamp(24px,3.5vw,34px)}
-.header p{margin-top:6px;color:var(--muted);font-size:clamp(12px,2.5vw,14px)}
+.header{padding:18px 14px 8px;text-align:center}
+.header h1{font-family:Cinzel,serif;font-weight:900;letter-spacing:.4px;font-size:clamp(22px,3.6vw,34px)}
+.header p{color:var(--muted);font-size:clamp(12px,2.4vw,14px)}
 
-.map{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:16px;max-width:1100px;margin:0 auto}
-@media (max-width:900px){.map{grid-template-columns:repeat(3,1fr)}}
-@media (max-width:640px){.map{grid-template-columns:repeat(2,1fr)}}
+/* ---- Map Canvas ---- */
+#map{position:relative; height:calc(100dvh - 140px); max-width:1100px; margin:6px auto 0; border:1px solid #ffffff14; border-radius:20px; overflow:hidden;
+  background:radial-gradient(2000px 800px at 50% 0%, #0f1b3e 0%, #0b1530 40%, #0a1227 100%);} 
 
-.tile{position:relative;border:1px solid var(--outline);border-radius:var(--radius);padding:14px;min-height:120px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(180deg,#0d1a3a,#0b1530 40%);
-  box-shadow:inset 0 0 0 1px #00000020, 0 6px 18px #00000030;cursor:pointer;transition:transform .18s ease, box-shadow .18s ease}
-.tile:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 1px #00000020, 0 10px 22px #00000045}
-.tile h3{font-family:Cinzel,serif;font-size:16px}
-.tile .sub{color:var(--muted);font-size:12px;margin-top:3px}
-.tile .dots{position:absolute;inset:auto 10px 10px 10px;display:flex;gap:6px;opacity:.7}
-.dot{width:7px;height:7px;border-radius:50%;background:#233057;box-shadow:0 0 0 1px #00000040 inset}
-.dot.visited{background:#3de2ff}
+/* Month labels */
+.month-label{position:absolute; color:#c7d2fe; font-size:12px; opacity:.8; pointer-events:none; font-family:Cinzel,serif}
 
-/* Selected glow */
-.tile.active{outline:1px solid #68a0ff55;box-shadow:0 0 0 2px #68a0ff22 inset, 0 0 28px #68a0ff26}
+/* Week nodes (shimmering circles) */
+.node{position:absolute; width:28px; height:28px; border-radius:50%;
+  background: radial-gradient(circle at 40% 35%, #ffe66d, #ffd400 60%, #d4a900 100%);
+  box-shadow: 0 0 0 2px #00000050 inset, 0 0 10px #ffd40080, 0 0 26px #ffd40040; 
+  animation:pulse 2.2s ease-in-out infinite; cursor:pointer; outline:none; border:none}
+.node.locked{background: radial-gradient(circle at 40% 35%, #3a476e, #26345a 60%, #1c2746 100%); box-shadow:0 0 0 2px #00000060 inset}
+.node.visited{background: radial-gradient(circle at 40% 35%, #bff7ff, #65e7ff 62%, #2bd0ff 100%); box-shadow:0 0 0 2px #00141e inset, 0 0 18px #65e7ffaa, 0 0 34px #2bd0ff55}
+@keyframes pulse{0%,100%{filter:brightness(1)} 50%{filter:brightness(1.18)}}
 
-/* --------- Yellow Booha Ghost --------- */
-.booha{position:absolute; width:64px; height:72px; pointer-events:none; transform:translate(-50%,-50%);
-  filter:drop-shadow(0 6px 18px #ffd40055); z-index:10}
-.booha .body{position:absolute; inset:0; border-radius:50% 50% 42% 42%/60% 60% 24% 24%;
-  background:linear-gradient(#fff87a,#ffd400); box-shadow:inset 0 -6px 12px #b98f00aa}
-.booha .frill{position:absolute;left:0;right:0;bottom:0;height:18px;background:#fff87a;border-radius:0 0 50% 50%;
-  -webkit-clip-path:polygon(0 50%,8% 100%,16% 50%,24% 100%,32% 50%,40% 100%,48% 50%,56% 100%,64% 50%,72% 100%,80% 50%,88% 100%,96% 50%,100% 50%);
-          clip-path:polygon(0 50%,8% 100%,16% 50%,24% 100%,32% 50%,40% 100%,48% 50%,56% 100%,64% 50%,72% 100%,80% 50%,88% 100%,96% 50%,100% 50%)}
-.booha .eyes{position:absolute;top:34px;left:14px;right:14px;height:16px;}
-.booha .eyes::before,.booha .eyes::after{content:'';position:absolute;top:0;width:12px;height:12px;border-radius:50%;background:#000}
-.booha .eyes::before{left:8px}.booha .eyes::after{right:8px}
+/* Path hint (subtle line) */
+.path{position:absolute; left:0; top:0; right:0; bottom:0; pointer-events:none}
+.path svg{width:100%;height:100%;opacity:.14}
 
-/* Float animation */
-.bob{animation:bob 3s ease-in-out infinite}
-@keyframes bob{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-8px)}}
+/* ---- Top-down Booha ---- */
+#booha{position:absolute; width:32px; height:32px; border-radius:50%; z-index:10; pointer-events:none;
+  background:radial-gradient(circle at 35% 35%, #fffef0 0%, #fff87a 40%, #ffd400 78%, #ffb300 100%);
+  box-shadow: 0 0 10px #ffd400aa, 0 8px 24px #00000080; transform:translate(-50%,-50%)}
+/* hover shadow ring */
+#shadow{position:absolute; width:38px; height:10px; background:radial-gradient(ellipse at center, #00000070 0%, transparent 70%);
+  transform:translate(-50%,-50%); filter:blur(2px); opacity:.6; pointer-events:none; z-index:5}
 
-/* --------- Sparkly Trail --------- */
-.spark{position:absolute;width:6px;height:6px;border-radius:50%;background:radial-gradient(circle at 35% 35%, #fff, #ffe66d 50%, transparent 70%);
-  box-shadow:0 0 8px #ffd400aa; pointer-events:none; animation:spark 600ms ease-out forwards}
-@keyframes spark{0%{transform:scale(.8);opacity:1} 60%{transform:scale(1.2);opacity:.9} 100%{transform:scale(0.2) translateY(6px);opacity:0}}
+/* floating idle bob for life */
+.idle{animation:idle 3s ease-in-out infinite}
+@keyframes idle{0%,100%{transform:translate(-50%,-50%) translateY(0)} 50%{transform:translate(-50%,-50%) translateY(-4px)}}
 
-/* --------- Drawer (Weeks) --------- */
-.drawer{position:fixed;left:0;right:0;bottom:-60vh;height:60vh;background:linear-gradient(180deg,#101d42,#0b1530);
-  border-top:1px solid var(--outline); border-radius:22px 22px 0 0; box-shadow:0 -8px 30px #00000060; transition:bottom .3s ease; z-index:20}
-.drawer.open{bottom:0}
-.drawer .grab{height:28px;display:flex;align-items:center;justify-content:center}
-.drawer .grab i{width:64px;height:5px;border-radius:999px;background:#ffffff22}
-.drawer h2{font-family:Cinzel,serif;font-size:18px;padding:6px 18px;color:#e0e7ff}
-.weeks{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:12px 16px 20px}
-@media(min-width:860px){.weeks{grid-template-columns:repeat(4,1fr)}}
-.card{border:1px solid var(--outline);border-radius:18px;padding:12px;background:linear-gradient(180deg,#0f1b3e,#0b1530);
-  display:flex;flex-direction:column;gap:8px;min-height:120px}
-.card b{font-family:Cinzel,serif;font-size:14px}
-.row{display:flex;gap:8px;margin-top:auto}
-.btn{flex:1;text-align:center;padding:10px 12px;border-radius:14px;border:1px solid #ffffff26;background:#101a39;color:#e2e8f0;cursor:pointer;text-decoration:none;font-size:13px}
-.btn:hover{background:#122045}
-.btn.primary{border-color:#ffe06644;background:linear-gradient(180deg,#1a2550,#122045)}
+/* Sparkly trail */
+.spark{position:absolute;width:6px;height:6px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle at 35% 35%, #fff, #ffe66d 55%, transparent 70%);
+  box-shadow:0 0 10px #ffd400c0; animation:spark .7s ease-out forwards}
+@keyframes spark{0%{transform:scale(.9);opacity:1}60%{transform:scale(1.1)}100%{transform:scale(.2) translateY(6px);opacity:0}}
 
 /* Footer */
-.footer{padding:14px 16px;color:#a8b1c4;font-size:12px;text-align:center;border-top:1px solid var(--outline)}
-.footer a{color:#c9d6ff}
+.footer{padding:10px 12px; text-align:center; color:#9fb0d5; font-size:12px}
+.footer a{color:#cfe0ff}
 
-/* Visited marker on week cards */
-.card.visited{outline:1px solid #3de2ff44;box-shadow:0 0 0 2px #3de2ff22 inset}
+/* Modal (week decks) */
+.modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:50}
+.modal.show{display:flex}
+.modal .backdrop{position:absolute; inset:0; background:#0008}
+.modal .card{position:relative; width:min(680px,92vw); border-radius:18px; border:1px solid #ffffff22; padding:16px; background:linear-gradient(180deg,#101d42,#0b1530);
+  box-shadow:0 20px 50px #000a}
+.modal h2{font-family:Cinzel,serif; font-size:18px}
+.modal p{color:#c7d2fe; margin:6px 0 12px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.btn{flex:1; text-align:center; padding:10px 12px; border-radius:14px; border:1px solid #ffffff26; background:#101a39; color:#e2e8f0; text-decoration:none; font-size:14px}
+.btn:hover{background:#122045}
+.btn.primary{border-color:#ffe06644; background:linear-gradient(180deg,#1a2550,#122045)}
+.close{position:absolute; right:10px; top:10px; border:none; background:transparent; color:#cbd5e1; font-size:20px; cursor:pointer}
+
+/* Legend */
+.legend{position:absolute; right:10px; top:10px; display:flex; gap:10px; align-items:center; background:#0b153080; padding:8px 10px; border-radius:12px; border:1px solid #ffffff1f}
+.legend i{display:inline-block; width:14px; height:14px; border-radius:50%}
+.legend .c1{background:radial-gradient(circle,#ffd400,#d4a900)}
+.legend .c2{background:radial-gradient(circle,#65e7ff,#2bd0ff)}
+.legend .c3{background:radial-gradient(circle,#3a476e,#1c2746)}
+.legend span{color:#cfe0ff; font-size:12px}
 
 </style>
 </head>
 <body>
-<div class="wrapper">
   <header class="header">
-    <h1>Booha Adventure: Year One</h1>
-    <p>January to December — Booha travels the town. Choose a month to enter. Progress is saved on this device.</p>
+    <h1>Booha Overworld: Year One</h1>
+    <p>Top-down map from January to December. Guide Booha to each shimmering circle. When he arrives, open this week’s decks.</p>
   </header>
 
-  <main class="map" id="map">
-    <!-- Tiles will be injected by JS with month names & subtitles -->
-  </main>
+  <section id="map">
+    <div class="legend">
+      <i class="c1"></i><span>Next</span>
+      <i class="c2"></i><span>Completed</span>
+      <i class="c3"></i><span>Locked</span>
+    </div>
+    <!-- subtle SVG path (decorative) -->
+    <div class="path" aria-hidden="true">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+        <path d="M5 10 H95 V20 H5 V30 H95 V40 H5 V50 H95 V60 H5 V70 H95 V80 H5 V90 H95" stroke="#7dd3fc" stroke-width=".8" fill="none" stroke-linecap="round" stroke-dasharray="2 3"/>
+      </svg>
+    </div>
+  </section>
 
-  <div class="footer">Bryan's English School — Boo‑riculum Adventure • <a href="#" id="toMenu">Back to Main Menu</a></div>
-</div>
+  <div class="footer">Bryan's English School — Boo‑riculum Adventure • <a href="#" id="reset">reset progress</a></div>
 
-<!-- Yellow Booha -->
-<div class="booha bob" id="booha" aria-hidden="true">
-  <div class="body"></div>
-  <div class="frill"></div>
-  <div class="eyes"></div>
-</div>
+  <!-- Booha & shadow -->
+  <div id="shadow" class="idle"></div>
+  <div id="booha" class="idle" aria-hidden="true"></div>
 
-<!-- Weeks Drawer -->
-<section class="drawer" id="drawer" aria-hidden="true">
-  <div class="grab"><i></i></div>
-  <h2 id="drawerTitle">Month</h2>
-  <div class="weeks" id="weeks"></div>
-</section>
+  <!-- Modal -->
+  <div class="modal" id="modal" aria-hidden="true">
+    <div class="backdrop" id="backdrop"></div>
+    <div class="card">
+      <button class="close" id="close">×</button>
+      <h2 id="title">Month — Week</h2>
+      <p id="desc">Choose a deck to open. You can change these URLs later.</p>
+      <div class="row">
+        <a class="btn primary" id="deck1" href="#">Deck 1 (placeholder)</a>
+        <a class="btn" id="deck2" href="#">Deck 2 (placeholder)</a>
+      </div>
+    </div>
+  </div>
 
 <script>
-// ------------------------------
-// Config
-// ------------------------------
+// --------------------------------------
+// CONFIG
+// --------------------------------------
 const MONTHS = [
-  { key:'january',   label:'January',   sub:'New Beginnings & Goals' },
-  { key:'february',  label:'February',  sub:'Daily Routines' },
-  { key:'march',     label:'March',     sub:'Travel & Safety' },
-  { key:'april',     label:'April',     sub:'World Around Us' },
-  { key:'may',       label:'May',       sub:'Nature & Environment' },
-  { key:'june',      label:'June',      sub:'Summer & Fun' },
-  { key:'july',      label:'July',      sub:'Storytelling & Imagination' },
-  { key:'august',    label:'August',    sub:'Nature & Outdoors' },
-  { key:'september', label:'September', sub:'School Life' },
-  { key:'october',   label:'October',   sub:'Transportation' },
-  { key:'november',  label:'November',  sub:'Housing' },
-  { key:'december',  label:'December',  sub:'Holidays & Reflections' }
+  'January','February','March','April','May','June','July','August','September','October','November','December'
 ];
 
-const PLACEHOLDER_HREF = 'placeholder.html'; // one template page for now
+// 12 months × 4 weeks = 48 nodes in a zigzag rows layout
+// We compute positions in percentages for responsiveness.
+const ROWS = 12, COLS = 4;
+// padding around edges
+const PAD_X = 6, PAD_Y = 6; // percent
 
-// localStorage keys
-const VISITED_KEY = 'booha_adventure_visited_weeks_v1';
-const LAST_POS_KEY = 'booha_adventure_last_tile_pos_v1';
+// State
+const LS_INDEX = 'booha_overworld_current_index_v1';
+const LS_VISITED = 'booha_overworld_visited_v1';
+let currentIndex = parseInt(localStorage.getItem(LS_INDEX) || '0', 10);
+let visited = JSON.parse(localStorage.getItem(LS_VISITED) || '[]');
 
-let visitedWeeks = JSON.parse(localStorage.getItem(VISITED_KEY) || '{}');
+// Elements
+const map = document.getElementById('map');
+const booha = document.getElementById('booha');
+const shadow = document.getElementById('shadow');
+const modal = document.getElementById('modal');
+const backdrop = document.getElementById('backdrop');
+const closeBtn = document.getElementById('close');
+const titleEl = document.getElementById('title');
+const deck1 = document.getElementById('deck1');
+const deck2 = document.getElementById('deck2');
 
-// ------------------------------
-// Build Map
-// ------------------------------
-const mapEl = document.getElementById('map');
-MONTHS.forEach((m, idx)=>{
-  const tile = document.createElement('button');
-  tile.className = 'tile';
-  tile.setAttribute('data-month', m.key);
-  tile.setAttribute('data-index', idx);
-  tile.innerHTML = `
-    <div>
-      <h3>${m.label}</h3>
-      <div class="sub">${m.sub}</div>
-    </div>
-    <div class="dots" aria-hidden="true">
-      <span class="dot" data-w="1"></span>
-      <span class="dot" data-w="2"></span>
-      <span class="dot" data-w="3"></span>
-      <span class="dot" data-w="4"></span>
-    </div>
-  `;
-  tile.addEventListener('click', ()=>openMonth(m, tile));
-  mapEl.appendChild(tile);
-});
+// Build coordinates and nodes
+const nodes = []; // {i, monthIdx, weekIdx, x%, y%, el}
+(function buildNodes(){
+  const mapRect = map.getBoundingClientRect();
+  for(let r=0; r<ROWS; r++){
+    const y = PAD_Y + ( (100 - PAD_Y*2) * (r + 0.5) / ROWS );
+    const snake = r % 2 === 1; // reverse every other row
+    for(let c=0; c<COLS; c++){
+      const t = snake ? (COLS - 1 - c) : c;
+      const x = PAD_X + ( (100 - PAD_X*2) * (t + 0.5) / COLS );
+      const i = r*COLS + c;
+      const monthIdx = r;
+      const weekIdx = c + 1;
+      const el = document.createElement('button');
+      el.className = 'node';
+      el.style.left = x + '%';
+      el.style.top  = y + '%';
+      el.title = `${MONTHS[monthIdx]} — Week ${weekIdx}`;
+      el.dataset.index = i;
+      el.dataset.month = monthIdx;
+      el.dataset.week = weekIdx;
+      map.appendChild(el);
+      nodes.push({i, monthIdx, weekIdx, x, y, el});
 
-// apply visited dots on load
-function refreshDots(){
-  document.querySelectorAll('.tile').forEach(tile=>{
-    const month = tile.getAttribute('data-month');
-    for(let w=1; w<=4; w++){
-      const dot = tile.querySelector(`.dot[data-w="${w}"]`);
-      const key = `${month}-w${w}`;
-      if(visitedWeeks[key]) dot.classList.add('visited');
+      // month labels at first node of visual left side each row
+      if(c===0){
+        const ml = document.createElement('div');
+        ml.className = 'month-label';
+        ml.textContent = MONTHS[monthIdx];
+        // place label near left-most visual circle (consider snake)
+        const lx = snake ? (PAD_X + ( (100 - PAD_X*2) * (COLS - 0.9) / COLS )) : (PAD_X + ( (100 - PAD_X*2) * (0.1) / COLS ));
+        ml.style.left = lx + '%';
+        ml.style.top  = (y - 5) + '%';
+        map.appendChild(ml);
+      }
+    }
+  }
+})();
+
+function refreshNodeStates(){
+  nodes.forEach(n=>{
+    n.el.classList.remove('locked','visited');
+    if(visited.includes(n.i)){
+      n.el.classList.add('visited');
+      n.el.disabled = false;
+    } else if(n.i === currentIndex){
+      // next playable
+      n.el.disabled = false;
+    } else if(n.i < currentIndex){
+      n.el.classList.add('visited');
+      n.el.disabled = false;
+    } else {
+      n.el.classList.add('locked');
+      n.el.disabled = true;
     }
   });
 }
 
-// ------------------------------
-// Booha movement
-// ------------------------------
-const booha = document.getElementById('booha');
-function moveBoohaTo(el){
-  const r = el.getBoundingClientRect();
-  const x = r.left + r.width/2 + window.scrollX;
-  const y = r.top + r.height/2 + window.scrollY;
-  // leave sparkles along the way
-  const steps = 12;
-  const start = booha.getBoundingClientRect();
-  const sx = start.left + start.width/2 + window.scrollX;
-  const sy = start.top + start.height/2 + window.scrollY;
-  for(let i=1;i<=steps;i++){
-    setTimeout(()=>{
-      const px = sx + (x - sx) * (i/steps);
-      const py = sy + (y - sy) * (i/steps);
-      spawnSpark(px, py);
-    }, i*18);
+function placeBoohaAtIndex(i){
+  const n = nodes[i] || nodes[0];
+  positionBooha(n.x, n.y, false);
+}
+
+function positionBooha(xPercent, yPercent, trail=true){
+  const mapRect = map.getBoundingClientRect();
+  const x = mapRect.left + (xPercent/100)*mapRect.width + window.scrollX;
+  const y = mapRect.top  + (yPercent/100)*mapRect.height + window.scrollY;
+
+  const br = booha.getBoundingClientRect();
+  const sx = br.left + br.width/2 + window.scrollX;
+  const sy = br.top  + br.height/2 + window.scrollY;
+  const steps = 14;
+  if(trail){
+    for(let k=1;k<=steps;k++){
+      setTimeout(()=>{
+        const px = sx + (x - sx) * (k/steps);
+        const py = sy + (y - sy) * (k/steps);
+        spawnSpark(px, py);
+      }, k*16);
+    }
   }
   booha.style.left = x + 'px';
   booha.style.top  = y + 'px';
-  localStorage.setItem(LAST_POS_KEY, JSON.stringify({x,y}));
+  shadow.style.left = x + 'px';
+  shadow.style.top  = (y + 18) + 'px';
 }
+
 function spawnSpark(x,y){
   const s = document.createElement('i');
   s.className = 'spark';
-  s.style.left = (x + (Math.random()*10-5)) + 'px';
-  s.style.top  = (y + (Math.random()*10-5)) + 'px';
+  s.style.left = (x + (Math.random()*12-6)) + 'px';
+  s.style.top  = (y + (Math.random()*12-6)) + 'px';
   document.body.appendChild(s);
-  setTimeout(()=>s.remove(), 650);
+  setTimeout(()=>s.remove(), 720);
 }
 
-// place booha initially (center of first tile or last saved)
+// Open modal when clicking the current node
+nodes.forEach(n=>{
+  n.el.addEventListener('click', ()=>{
+    if(n.i > currentIndex) return; // locked
+    openWeek(n);
+  });
+});
+
+function openWeek(n){
+  titleEl.textContent = `${MONTHS[n.monthIdx]} — Week ${n.weekIdx}`;
+  const qs = `?month=${MONTHS[n.monthIdx].toLowerCase()}&week=${n.weekIdx}`;
+  deck1.href = `placeholder.html${qs}&deck=1`;
+  deck2.href = `placeholder.html${qs}&deck=2`;
+  modal.classList.add('show');
+
+  // When any deck is clicked: mark visited and advance to next index
+  const markAndAdvance = () => {
+    if(!visited.includes(n.i)) visited.push(n.i);
+    localStorage.setItem(LS_VISITED, JSON.stringify(visited));
+    if(currentIndex === n.i && currentIndex < nodes.length-1){
+      currentIndex++;
+      localStorage.setItem(LS_INDEX, String(currentIndex));
+    }
+    refreshNodeStates();
+    // small delay to let the page start
+    setTimeout(()=>{
+      modal.classList.remove('show');
+      moveToCurrent();
+    }, 120);
+  };
+  deck1.onclick = markAndAdvance;
+  deck2.onclick = markAndAdvance;
+}
+
+function moveToCurrent(){
+  const n = nodes[currentIndex] || nodes[0];
+  positionBooha(n.x, n.y, true);
+}
+
+// Close modal
+[backdrop, closeBtn].forEach(el=>el.addEventListener('click',()=>modal.classList.remove('show')));
+
+// Reset
+document.getElementById('reset').addEventListener('click', (e)=>{
+  e.preventDefault();
+  if(confirm('Reset local progress on this device?')){
+    currentIndex = 0; visited = [];
+    localStorage.setItem(LS_INDEX, '0');
+    localStorage.setItem(LS_VISITED, '[]');
+    refreshNodeStates();
+    placeBoohaAtIndex(0);
+  }
+});
+
+// Initial placement and state
 window.addEventListener('load', ()=>{
-  const first = document.querySelector('.tile');
-  const saved = JSON.parse(localStorage.getItem(LAST_POS_KEY) || 'null');
-  if(saved){
-    booha.style.left = saved.x + 'px';
-    booha.style.top  = saved.y + 'px';
-  }else if(first){
-    const r = first.getBoundingClientRect();
-    booha.style.left = (r.left + r.width/2 + window.scrollX) + 'px';
-    booha.style.top  = (r.top + r.height/2 + window.scrollY) + 'px';
-  }
-  refreshDots();
+  refreshNodeStates();
+  placeBoohaAtIndex(currentIndex);
 });
 
-// keep booha aligned on resize (no animation)
+// Keep positions aligned on resize
 window.addEventListener('resize', ()=>{
-  const active = document.querySelector('.tile.active') || document.querySelector('.tile');
-  if(!active) return;
-  const r = active.getBoundingClientRect();
-  booha.style.left = (r.left + r.width/2 + window.scrollX) + 'px';
-  booha.style.top  = (r.top + r.height/2 + window.scrollY) + 'px';
+  const n = nodes[currentIndex] || nodes[0];
+  positionBooha(n.x, n.y, false);
 });
-
-// ------------------------------
-// Drawer logic (Weeks + placeholders)
-// ------------------------------
-const drawer = document.getElementById('drawer');
-const drawerTitle = document.getElementById('drawerTitle');
-const weeksEl = document.getElementById('weeks');
-
-function openMonth(month, tile){
-  document.querySelectorAll('.tile').forEach(t=>t.classList.remove('active'));
-  tile.classList.add('active');
-  moveBoohaTo(tile);
-
-  drawerTitle.textContent = `${month.label} — ${month.sub}`;
-  weeksEl.innerHTML = '';
-  for(let w=1; w<=4; w++){
-    const card = document.createElement('div');
-    card.className = 'card';
-    const key = `${month.key}-w${w}`;
-    if(visitedWeeks[key]) card.classList.add('visited');
-
-    // build links with query params for placeholder page
-    const d1 = `${PLACEHOLDER_HREF}?month=${month.key}&week=${w}&deck=1`;
-    const d2 = `${PLACEHOLDER_HREF}?month=${month.key}&week=${w}&deck=2`;
-
-    card.innerHTML = `
-      <b>Week ${w}</b>
-      <div class="row">
-        <a class="btn primary" href="${d1}">Deck 1 (placeholder)</a>
-        <a class="btn" href="${d2}">Deck 2 (placeholder)</a>
-      </div>
-    `;
-
-    // mark visited when user clicks either link
-    card.querySelectorAll('a').forEach(a=>{
-      a.addEventListener('click', ()=>{
-        visitedWeeks[key] = true; 
-        localStorage.setItem(VISITED_KEY, JSON.stringify(visitedWeeks));
-        refreshDots();
-      });
-    });
-
-    weeksEl.appendChild(card);
-  }
-  drawer.classList.add('open');
-}
-
-// close drawer by tapping grab area
-drawer.querySelector('.grab').addEventListener('click', ()=>drawer.classList.remove('open'));
-
-// Back to menu href (no real nav yet)
-document.getElementById('toMenu').addEventListener('click', (e)=>{e.preventDefault(); window.scrollTo({top:0,behavior:'smooth'});});
 </script>
 </body>
 </html>
-
