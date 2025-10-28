@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Booha Maze — Year One (Deluxe)</title>
+<title>Booha Maze — Year One (Deluxe 2)</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+JP:wght@500;700&display=swap" rel="stylesheet" />
 <style>
 :root{ --zoom:1; --tx:0px; --ty:0px; }
@@ -13,27 +13,27 @@ body{background:radial-gradient(140% 100% at 50% 0%, #17381f 0%, #112a18 40%, #0
 
 /* Fullscreen stage */
 .viewport{position:relative;width:100vw;height:100vh;overflow:hidden}
-.world{position:absolute;left:50%;top:50%;transform:translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(var(--zoom));transform-origin:center;transition:transform .6s cubic-bezier(.22,.65,.2,1)}
+.world{position:absolute;left:50%;top:50%;transform:translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(var(--zoom));transform-origin:center;transition:transform .65s cubic-bezier(.22,.65,.2,1)}
 #maze{width:100vw;height:100vh;background:url('assets/maze.png') center/contain no-repeat}
 
 /* Booha (transparent PNG expected) */
 #booha{position:absolute;width:68px;height:68px;transform:translate(-50%,-50%);z-index:12;pointer-events:none;image-rendering:auto;filter:drop-shadow(0 0 10px #ffe17a) drop-shadow(0 4px 18px #000a)}
 @keyframes bob{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-6px)}}
-.bobbing{animation:bob 3.2s ease-in-out infinite}
+.bobbing{animation:bob 3.4s ease-in-out infinite}
 
-/* GOLD sparkle trail (fine + a little more) */
-.spark{position:absolute;width:3px;height:3px;border-radius:50%;pointer-events:none;background:radial-gradient(circle at 40% 40%, #fff, #ffe07a 60%, transparent 72%);box-shadow:0 0 6px #ffd86d, 0 0 10px #ffec9c;opacity:0.95;animation:spark .6s ease-out forwards}
+/* GOLD sparkle trail (fine + denser) */
+.spark{position:absolute;width:2.6px;height:2.6px;border-radius:50%;pointer-events:none;background:radial-gradient(circle at 40% 40%, #fff, #ffe07a 60%, transparent 72%);box-shadow:0 0 5px #ffd86d, 0 0 9px #ffec9c;opacity:0.95;animation:spark .6s ease-out forwards}
 @keyframes spark{
   0%{transform:translate(0,0) scale(1);opacity:.95}
-  60%{transform:translate(0,-4px) scale(1.15);opacity:.8}
-  100%{transform:translate(0,8px) scale(.6);opacity:0}
+  60%{transform:translate(0,-4px) scale(1.12);opacity:.8}
+  100%{transform:translate(0,9px) scale(.58);opacity:0}
 }
 
-/* FAIRY LIGHTS (month color) */
-.fairy{position:absolute;width:2.5px;height:2.5px;border-radius:50%;pointer-events:none;box-shadow:0 0 8px currentColor, 0 0 14px currentColor;opacity:.95;transform:translate(-50%,-50%) scale(.8);animation:drift var(--dur,3600ms) ease-out forwards}
+/* FAIRY LIGHTS (month color, behind window) */
+.fairy{position:absolute;width:2.2px;height:2.2px;border-radius:50%;pointer-events:none;box-shadow:0 0 8px currentColor, 0 0 14px currentColor;opacity:.96;transform:translate(-50%,-50%) scale(.82);animation:drift var(--dur,4800ms) ease-out forwards;z-index:20}
 @keyframes drift{
-  from{transform:translate(-50%,-50%) scale(.8);opacity:.95}
-  to{transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.05);opacity:0}
+  from{transform:translate(-50%,-50%) scale(.82);opacity:.96}
+  to{transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.06);opacity:0}
 }
 
 /* Weekly stops: invisible until revealed */
@@ -137,7 +137,7 @@ const titleJP=document.getElementById('title-jp');
 
 /* ---------------- Audio ---------------- */
 const bgm = new Audio('audio/sneaky.mp3'); bgm.loop = true;
-const sfxCheckpoint = new Audio('audio/checkpoint.mp3');
+const sfxCheckpoint = new Audio('audio/checkpoint.mp3'); // required
 let audioPrimed = false;
 function primeAudio(){ if(audioPrimed) return; audioPrimed=true; bgm.currentTime=0; bgm.play().catch(()=>{}); }
 
@@ -172,25 +172,31 @@ function revealStop(i){
   const el=stops[i].el; el.classList.remove('hidden'); el.classList.add('seen');
 }
 
-function placeBoohaAt(i, offset=-1){
+/* pixel-placing helpers (exact center) */
+function stopPx(i){
   const n=stops[i]; const r=maze.getBoundingClientRect();
-  const x=r.left+(n.x/100)*r.width + window.scrollX + offset;
-  const y=r.top +(n.y/100)*r.height + window.scrollY + offset;
+  const x=r.left+(n.x/100)*r.width + window.scrollX;
+  const y=r.top +(n.y/100)*r.height + window.scrollY;
+  return {x,y};
+}
+function placeBoohaAt(i){
+  const {x,y}=stopPx(i);
   booha.style.left=x+'px'; booha.style.top=y+'px';
 }
 
-/* --------- Movement (slower glide) --------- */
+/* --------- Movement (much slower + exact stop) --------- */
 function moveBooha(to){
   return new Promise(resolve=>{
     moving=true;
-    const from=stops[currentIndex]; const end=stops[to];
     const r=maze.getBoundingClientRect();
-    const sx=r.left+(from.x/100)*r.width + window.scrollX;
-    const sy=r.top +(from.y/100)*r.height + window.scrollY;
-    const ex=r.left+(end.x/100)*r.width + window.scrollX;
-    const ey=r.top +(end.y/100)*r.height + window.scrollY;
+    const from = stopPx(currentIndex);
+    const end  = stopPx(to);
+
+    const sx=from.x, sy=from.y, ex=end.x, ey=end.y;
     const dist=Math.hypot(ex-sx,ey-sy);
-    const dur = Math.max(2200, Math.min(6500, dist * 2.6)); // slower than before
+
+    // MUCH slower glide:
+    const dur = Math.max(3500, Math.min(9000, dist * 4.0)); // ~50% speed of last build
 
     const t0=performance.now();
     function step(t){
@@ -199,34 +205,39 @@ function moveBooha(to){
       const x=sx+(ex-sx)*e, y=sy+(ey-sy)*e;
       booha.style.left=x+'px'; booha.style.top=y+'px';
 
-      // GOLD trail — fine + a little more
-      if(Math.random()<.95){
-        for(let n=0;n<(Math.random()<.4?2:1);n++) spawnSpark(x+(Math.random()*6-3), y+(Math.random()*6-3), GOLD);
+      // GOLD trail — fine + denser
+      if(Math.random()<.97){
+        for(let n=0;n<(Math.random()<.45?2:1);n++) spawnSpark(x+(Math.random()*5-2.5), y+(Math.random()*5-2.5));
       }
-      if(k<1) requestAnimationFrame(step); else {moving=false; resolve();}
+
+      if(k<1) requestAnimationFrame(step); 
+      else {
+        // snap exactly to the stop
+        placeBoohaAt(to);
+        moving=false; 
+        resolve();
+      }
     }
     requestAnimationFrame(step);
   });
 }
 
 /* -------- Visual effects -------- */
-function spawnSpark(x,y,color){
+function spawnSpark(x,y){
   const s=document.createElement('i'); s.className='spark'; s.style.left=x+'px'; s.style.top=y+'px';
   document.body.appendChild(s); setTimeout(()=>s.remove(),620);
 }
 
 function fairyBurst(i){
-  const r=maze.getBoundingClientRect();
-  const node=stops[i];
-  const cx=r.left+(node.x/100)*r.width + window.scrollX;
-  const cy=r.top +(node.y/100)*r.height + window.scrollY;
+  const {x:cx,y:cy}=stopPx(i);
   const color=monthColor(i);
 
-  const count = 70;           // tiny fairy lights
-  const radius = 140;         // how far they travel
+  const count = 150;            // more fairy lights
+  const radiusMin = 36;
+  const radiusMax = 180;        // further flow
   for(let n=0;n<count;n++){
     const a = Math.random()*Math.PI*2;
-    const len = 30 + Math.random()*(radius-30);
+    const len = radiusMin + Math.random()*(radiusMax-radiusMin);
     const dx = Math.cos(a)*len;
     const dy = Math.sin(a)*len;
 
@@ -237,9 +248,11 @@ function fairyBurst(i){
     tw.style.top  = cy+'px';
     tw.style.setProperty('--dx', dx+'px');
     tw.style.setProperty('--dy', dy+'px');
-    tw.style.setProperty('--dur', (3000+Math.random()*3000)+'ms'); // 3–6s
+    tw.style.setProperty('--dur', (4000+Math.random()*3000)+'ms'); // 4–7s
+    // Add tiny start delay to create waves
+    tw.style.animationDelay = (Math.random()*300)+'ms';
     document.body.appendChild(tw);
-    setTimeout(()=>tw.remove(), 6200);
+    setTimeout(()=>tw.remove(), 7600);
   }
 }
 
@@ -260,7 +273,7 @@ function zoomReset(){
   viewport.classList.remove('zoomed'); 
 }
 
-/* -------- Arrival behavior -------- */
+/* ---------------- Window ---------------- */
 function setWindowTitles(i){
   const m = monthOf(i);
   const w = weekOf(i);
@@ -269,18 +282,43 @@ function setWindowTitles(i){
   titleJP.textContent = `${MONTHS_JP[m]}　　第${w}週`;
   card.style.setProperty('--glow', color);
 }
-async function arriveAt(i){
-  revealStop(i);
-  sfxCheckpoint.currentTime=0; sfxCheckpoint.play().catch(()=>{});
-  fairyBurst(i);          // month-colored fairy lights
-  zoomTo(i);              // zoom in and STAY
-  setWindowTitles(i);     // set EN/JP titles + glow color
-  openWindow();
-}
-
-/* ---------------- Window ---------------- */
 function openWindow(){ modal.classList.add('show'); card.style.animation='none'; void card.offsetWidth; card.style.animation=null; } // replay pop
 function closeWindow(){ modal.classList.remove('show'); }
+
+/* ----- Audio gating: wait for SFX + at least 4s ----- */
+function playAndGateCheckpoint(){
+  return new Promise(resolve=>{
+    const started = performance.now();
+    let done = false;
+
+    const finish = ()=>{
+      if(done) return; done=true;
+      const elapsed = performance.now() - started;
+      const remain = Math.max(0, 4000 - elapsed); // ensure >=4s total
+      setTimeout(resolve, remain);
+    };
+
+    sfxCheckpoint.currentTime = 0;
+    const onEnd = ()=>{ sfxCheckpoint.removeEventListener('ended', onEnd); finish(); };
+    sfxCheckpoint.addEventListener('ended', onEnd);
+    sfxCheckpoint.play().catch(()=>{ // fallback if blocked
+      setTimeout(finish, 4000);
+    });
+
+    // absolute safety timeout (if metadata missing)
+    setTimeout(finish, 7000);
+  });
+}
+
+/* -------- Arrival behavior -------- */
+async function arriveAt(i){
+  revealStop(i);
+  fairyBurst(i);          // month-colored fairy lights (continue behind window)
+  zoomTo(i);              // zoom in and STAY
+  setWindowTitles(i);     // set EN/JP titles + glow color
+  await playAndGateCheckpoint();   // wait for checkpoint.mp3 + >=4s
+  openWindow();
+}
 
 /* ---------------- Controls ---------------- */
 resetBtn.addEventListener('click',()=>{
@@ -288,7 +326,7 @@ resetBtn.addEventListener('click',()=>{
   currentIndex=0; 
   revealed=Array(TOTAL).fill(false); 
   document.querySelectorAll('.stop').forEach(s=>s.className='stop hidden'); 
-  placeBoohaAt(0,-12); 
+  placeBoohaAt(0); 
   closeWindow(); 
   zoomReset();
 });
@@ -298,7 +336,7 @@ testBtn.addEventListener('click',()=>{
   currentIndex=0; 
   revealed=Array(TOTAL).fill(false);
   document.querySelectorAll('.stop').forEach(s=>s.className='stop hidden');
-  placeBoohaAt(0,-12);
+  placeBoohaAt(0);
   arriveAt(0);
 });
 
@@ -315,12 +353,12 @@ nextBtn.addEventListener('click', async ()=>{
 });
 
 /* --------------- Init ---------------- */
-placeBoohaAt(0,-12);
-window.addEventListener('resize',()=>placeBoohaAt(currentIndex,-12));
+placeBoohaAt(0);
+window.addEventListener('resize',()=>placeBoohaAt(currentIndex));
 
 /* ---------------- Utils ---------------- */
 function hexA(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return `rgba(${r},${g},${b},${a})`;}
-function shade(hex,p){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);const f=v=>Math.max(0,Math.min(255,Math.round(v*(100+p)/100)));return `#${f(r).toString(16).padStart(2,'0')}${f(g).toString(16).padStart(2,'0')}${f(b).toString(16).padStart(2,'0')}`;}
+function shade(hex,p){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);const f=v=>Math.max(0,Math.min(255,Math.round(v*(100+p)/100)));return `#${f(r).toString(16).padStart(2,'0')}${f(g).toString(16).padStart(2,'0')}${f(b).toString(16,'0')}`;}
 </script>
 </body>
 </html>
