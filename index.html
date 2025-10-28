@@ -3,143 +3,109 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Booha Maze — Year Adventure</title>
+<title>Booha Maze — Year Adventure (vFinal)</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+JP:wght@500;700&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#0b1530; --ink:#eaf1ff; --muted:#9fb0d5; --aqua:#65e7ff;
-  --zoom:1; --tx:0px; --ty:0px; /* world transform vars */
-}
+:root{ --bg:#0b1530; --ink:#eaf1ff; --muted:#9fb0d5; --aqua:#65e7ff; --zoom:1; --tx:0px; --ty:0px; }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",Helvetica,Arial;background:var(--bg);color:var(--ink)}
-
 .header{padding:18px 14px 6px;text-align:center}
 .header h1{font-family:Cinzel,serif;font-weight:900;letter-spacing:.4px;font-size:clamp(22px,3.6vw,34px)}
 .header p{color:var(--muted);font-size:clamp(12px,2.4vw,14px)}
 
-/* Viewport + World (for zoom/pan) */
+/* Viewport + World (zoom/pan only when landing) */
 .viewport{position:relative; height:calc(100dvh - 160px); max-width:1100px; margin:8px auto 0; border:1px solid #ffffff18; border-radius:20px; overflow:hidden; background:#081024}
-.viewport::after{ /* cinematic darken during zoom */
-  content:""; position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity .35s ease;
-  background:radial-gradient(120% 120% at 50% 50%, transparent 40%, #000 100%);
-}
+.viewport::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .35s ease;background:radial-gradient(120% 120% at 50% 50%, transparent 40%, #000 100%)}
 .viewport.zoomed::after{opacity:.55}
+.world{position:absolute;left:50%;top:50%;transform:translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(var(--zoom));transform-origin:center;transition:transform .55s cubic-bezier(.22,.65,.2,1)}
 
-.world{position:absolute; left:50%; top:50%; transform:translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(var(--zoom)); transform-origin:center; transition:transform .55s cubic-bezier(.22,.65,.2,1)}
+/* Maze background */
+#maze{display:block;width:1000px;height:auto;background:url('assets/maze.png') center/contain no-repeat;aspect-ratio:1000/1500}
 
-/* The forest maze image */
-#maze{display:block; width:1000px; height:auto; background:url('assets/maze.png') center/contain no-repeat; aspect-ratio:1000/1500; /* approximate 2:3; adjust if needed */}
-
-/* Booha sprite */
-#booha{position:absolute; width:64px; height:64px; transform:translate(-50%,-50%); z-index:20; filter:drop-shadow(0 10px 22px #000a)}
-#booha.glow{filter:drop-shadow(0 0 10px #ffd400aa) drop-shadow(0 10px 22px #000a)}
+/* Booha sprite (transparent, no box) */
+#booha{position:absolute;width:68px;height:68px;transform:translate(-50%,-50%);z-index:20;background:none !important;mix-blend-mode:normal;pointer-events:none;image-rendering:auto;filter:drop-shadow(0 10px 22px #0008)}
+#booha.glow{filter:drop-shadow(0 0 10px #ffd400a6) drop-shadow(0 10px 22px #0008)}
 @keyframes bob{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-6px)}}
 .bobbing{animation:bob 3s ease-in-out infinite}
 
-/* Week stop points */
-.stop{position:absolute; width:18px; height:18px; border-radius:50%; transform:translate(-50%,-50%); pointer-events:auto; cursor:pointer; opacity:.9}
-.stop.locked{background:radial-gradient(circle,#29365d 0%, #1c2847 65%, #17223e 100%); box-shadow:0 0 0 2px #0008 inset}
-.stop.next{animation:pulse 2s ease-in-out infinite}
-.stop.done{background:radial-gradient(circle,#c7fbff 0%, #65e7ff 60%, #2bd0ff 100%); box-shadow:0 0 0 2px #00141e inset, 0 0 14px #65e7ffbb, 0 0 30px #2bd0ff55}
-@keyframes pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
-
-/* Burst particles */
-.spark{position:absolute; width:6px; height:6px; border-radius:50%; pointer-events:none; background:radial-gradient(circle at 35% 35%, #fff, #ffe66d 60%, transparent 72%); box-shadow:0 0 10px currentColor; animation:spark .7s ease-out forwards}
+/* Trail sparkles */
+.spark{position:absolute;width:6px;height:6px;border-radius:50%;pointer-events:none;background:radial-gradient(circle at 35% 35%, #fff, #ffe66d 60%, transparent 72%);box-shadow:0 0 10px currentColor;animation:spark .7s ease-out forwards}
 @keyframes spark{0%{transform:scale(.85);opacity:1}60%{transform:scale(1.1)}100%{transform:scale(.2) translateY(6px);opacity:0}}
 
+/* Stops */
+.stop{position:absolute;width:18px;height:18px;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;opacity:.95}
+.stop.locked{background:radial-gradient(circle,#29365d 0%, #1c2847 65%, #17223e 100%);box-shadow:0 0 0 2px #0008 inset}
+.stop.next{animation:pulse 2s ease-in-out infinite}
+.stop.done{background:radial-gradient(circle,#c7fbff 0%, #65e7ff 60%, #2bd0ff 100%);box-shadow:0 0 0 2px #00141e inset,0 0 14px #65e7ffbb,0 0 30px #2bd0ff55}
+@keyframes pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+
 /* Footer + buttons */
-.footer{padding:10px 12px; text-align:center; color:#9fb0d5; font-size:12px}
-.footer a{color:#cfe0ff}
-#test,#edit{position:fixed; right:14px; z-index:60; padding:10px 14px; font-weight:700; border-radius:12px; border:1px solid #ffffff26; background:#122045; color:#e5edff; cursor:pointer}
-#test{bottom:14px}
-#edit{bottom:56px}
-#test:hover,#edit:hover{background:#1a2b5e}
+.footer{padding:10px 12px;text-align:center;color:#9fb0d5;font-size:12px}.footer a{color:#cfe0ff}
+#test,#edit{position:fixed;right:14px;z-index:60;padding:10px 14px;font-weight:700;border-radius:12px;border:1px solid #ffffff26;background:#122045;color:#e5edff;cursor:pointer}
+#test{bottom:14px}#edit{bottom:56px}#test:hover,#edit:hover{background:#1a2b5e}
 
 /* Modal */
-.modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:80}
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:80}
 .modal.show{display:flex}
-.modal .backdrop{position:absolute; inset:0; background:#0006}
-.modal .card{position:relative; width:min(680px,92vw); border-radius:18px; border:1px solid #ffffff22; padding:16px; background:linear-gradient(180deg,#101d42,#0b1530); box-shadow:0 20px 50px #000a}
-.modal h2{font-family:Cinzel,serif; font-size:18px}
-.modal p{color:#c7d2fe; margin:6px 0 12px}
+.modal .backdrop{position:absolute;inset:0;background:#0006}
+.modal .card{position:relative;width:min(680px,92vw);border-radius:18px;border:1px solid #ffffff22;padding:16px;background:linear-gradient(180deg,#101d42,#0b1530);box-shadow:0 20px 50px #000a}
+.modal h2{font-family:Cinzel,serif;font-size:18px}.modal p{color:#c7d2fe;margin:6px 0 12px}
 .row{display:flex;gap:10px;flex-wrap:wrap}
-.btn{flex:1; text-align:center; padding:10px 12px; border-radius:14px; border:1px solid #ffffff26; background:#101a39; color:#e2e8f0; text-decoration:none; font-size:14px}
-.btn:hover{background:#122045}
-.btn.primary{border-color:#ffe06644; background:linear-gradient(180deg,#1a2550,#122045)}
-.close{position:absolute; right:10px; top:10px; border:none; background:transparent; color:#cbd5e1; font-size:20px; cursor:pointer}
-
-/* Edit helpers */
-.coord{position:absolute; transform:translate(-50%,-100%); background:#0b1530; color:#cfe0ff; font-size:10px; padding:2px 6px; border-radius:8px; border:1px solid #ffffff22; display:none}
-.editing .coord{display:block}
-.editing .stop{outline:1px dashed #7dd3fc}
+.btn{flex:1;text-align:center;padding:10px 12px;border-radius:14px;border:1px solid #ffffff26;background:#101a39;color:#e2e8f0;text-decoration:none;font-size:14px}
+.btn:hover{background:#122045}.btn.primary{border-color:#ffe06644;background:linear-gradient(180deg,#1a2550,#122045)}
+.close{position:absolute;right:10px;top:10px;border:none;background:transparent;color:#cbd5e1;font-size:20px;cursor:pointer}
 </style>
 </head>
 <body>
-  <header class="header">
-    <h1>Booha Maze — Year Adventure</h1>
-    <p>Top‑down forest maze. Booha enters at the top‑left, finishes bottom‑right. 48 weekly stops with zoom + modal.</p>
-  </header>
+<header class="header">
+  <h1>Booha Maze — Year Adventure</h1>
+  <p>Zoomed out by default. Booha leaves a sparkly trail, lands on a weekly stop, then we zoom in and show the decks.</p>
+</header>
 
-  <section class="viewport" id="viewport">
-    <div class="world" id="world">
-      <div id="maze"></div>
-      <!-- Stops + Booha injected by JS -->
-    </div>
-  </section>
+<section class="viewport" id="viewport">
+  <div class="world" id="world">
+    <div id="maze"></div>
+    <!-- Stops injected by JS -->
+  </div>
+</section>
 
-  <div class="footer">Bryan's English School — Boo‑riculum Adventure • <a href="#" id="reset">reset progress</a></div>
-  <button id="edit" title="Toggle edit/drag mode">EDIT</button>
-  <button id="test" title="Auto-play the year">TEST</button>
+<div class="footer">Bryan's English School — Boo‑riculum Adventure • <a href="#" id="reset">reset progress</a></div>
+<button id="edit" title="Toggle edit/drag mode">EDIT</button>
+<button id="test" title="Auto-play the year">TEST</button>
 
-  <img id="booha" class="bobbing glow" src="assets/mazebooha.png" alt="Booha" />
+<img id="booha" class="bobbing glow" src="assets/mazebooha.png" alt="Booha" />
 
-  <!-- Modal -->
-  <div class="modal" id="modal" aria-hidden="true">
-    <div class="backdrop" id="backdrop"></div>
-    <div class="card">
-      <button class="close" id="close">×</button>
-      <h2 id="title">Month — Week</h2>
-      <p id="desc">Choose a deck to open. You can replace these URLs later.</p>
-      <div class="row">
-        <a class="btn primary" id="deck1" href="#">Deck 1 (placeholder)</a>
-        <a class="btn" id="deck2" href="#">Deck 2 (placeholder)</a>
-      </div>
+<!-- Modal -->
+<div class="modal" id="modal" aria-hidden="true">
+  <div class="backdrop" id="backdrop"></div>
+  <div class="card">
+    <button class="close" id="close">×</button>
+    <h2 id="title">Month — Week</h2>
+    <p id="desc">Choose a deck to open. You can replace these URLs later.</p>
+    <div class="row">
+      <a class="btn primary" id="deck1" href="#">Deck 1 (placeholder)</a>
+      <a class="btn" id="deck2" href="#">Deck 2 (placeholder)</a>
     </div>
   </div>
+</div>
 
 <script>
-// -------------------------------------------------
+// --------------------------------------
 // CONFIG
-// -------------------------------------------------
+// --------------------------------------
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MONTH_COLORS = ['#cddfff','#ffb6c1','#ffda8a','#a7f5b1','#7fdfff','#ffe066','#ff9edb','#f8b54c','#d6b3ff','#ff9851','#ffd6a1','#fff4c7'];
 const TOTAL_STOPS = 48; // 4 per month
 
-const LS_INDEX = 'booha_maze_index_v1';
-const LS_DONE  = 'booha_maze_done_v1';
-const LS_POS   = 'booha_maze_positions_v1'; // editable positions
-
+const LS_INDEX = 'booha_maze_index_v2';
+const LS_DONE  = 'booha_maze_done_v2';
 let currentIndex = parseInt(localStorage.getItem(LS_INDEX) || '0', 10);
 let done = JSON.parse(localStorage.getItem(LS_DONE) || '[]');
-let POS = JSON.parse(localStorage.getItem(LS_POS) || 'null');
 
-// If no saved positions, seed a reasonable serpentine along the maze image using percentage guesses.
-if(!Array.isArray(POS) || POS.length !== TOTAL_STOPS){
-  POS = Array.from({length:TOTAL_STOPS}, (_,i)=>{
-    const row = Math.floor(i/8); // 6 rows * 8 = 48
-    const tInRow = i%8;
-    const y = 6 + row* ( (88)/(6-1) ); // spread 6 rows from 6%..94%
-    const x = (row%2===0) ? (6 + tInRow*( (88)/(8-1) )) : (94 - tInRow*( (88)/(8-1) ));
-    return {x, y};
-  });
-}
-
-// -------------------------------------------------
-// ELEMENTS
-// -------------------------------------------------
 const viewport = document.getElementById('viewport');
 const world = document.getElementById('world');
+const mazeEl = document.getElementById('maze');
 const booha = document.getElementById('booha');
 const resetBtn = document.getElementById('reset');
 const testBtn = document.getElementById('test');
@@ -152,255 +118,167 @@ const titleEl = document.getElementById('title');
 const deck1 = document.getElementById('deck1');
 const deck2 = document.getElementById('deck2');
 
-// -------------------------------------------------
-// BUILD STOPS
-// -------------------------------------------------
-const stops = []; // {i, x%, y%, el, coord}
+// --------------------------------------
+// Build a polyline that follows your exact maze shape (percent coords)
+// Stops will be sampled evenly along this route so you get 48 perfectly spaced points.
+// You can tweak these waypoints to match any maze revision.
+// --------------------------------------
+const WAYPOINTS = [
+  {x:3, y:2}, {x:20, y:2}, {x:20, y:10}, {x:8, y:10}, {x:8, y:18}, {x:40, y:18}, {x:40, y:6}, {x:60, y:6}, {x:60, y:14}, {x:48, y:14}, {x:48, y:26}, {x:90, y:26},
+  {x:90, y:50}, {x:10, y:50}, {x:10, y:64}, {x:78, y:64}, {x:78, y:72}, {x:20, y:72}, {x:20, y:84}, {x:86, y:84}, {x:86, y:92}, {x:36, y:92}, {x:36, y:98}, {x:97, y:98}
+];
+
+function interpolateStops(waypoints, nStops){
+  // compute cumulative lengths
+  let lens=[0];
+  for(let i=1;i<waypoints.length;i++){
+    const a=waypoints[i-1], b=waypoints[i];
+    lens[i]=lens[i-1]+Math.hypot(b.x-a.x,b.y-a.y);
+  }
+  const total=lens[lens.length-1];
+  const stops=[];
+  for(let k=0;k<nStops;k++){
+    const d=(total*(k+1))/(nStops+1); // leave margin from ends
+    // find segment
+    let s=0; while(lens[s+1]<d) s++;
+    const a=waypoints[s], b=waypoints[s+1];
+    const segLen=lens[s+1]-lens[s];
+    const t=(d-lens[s])/segLen;
+    stops.push({x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t});
+  }
+  return stops;
+}
+
+const POS = interpolateStops(WAYPOINTS, TOTAL_STOPS);
+
+// Build stop elements
+const stops = [];
 POS.forEach((p,i)=>{
-  const el = document.createElement('button');
-  el.className = 'stop locked';
-  el.style.left = p.x + '%';
-  el.style.top  = p.y + '%';
-  el.title = `${MONTHS[Math.floor(i/4)]} — Week ${(i%4)+1}`;
+  const el=document.createElement('button');
+  el.className='stop locked';
+  el.style.left=p.x+'%'; el.style.top=p.y+'%';
+  el.title=`${MONTHS[Math.floor(i/4)]} — Week ${(i%4)+1}`;
   world.appendChild(el);
-  const coord = document.createElement('span');
-  coord.className = 'coord';
-  coord.textContent = `${p.x.toFixed(1)}%, ${p.y.toFixed(1)}%`;
-  el.appendChild(coord);
-  stops.push({i, x:p.x, y:p.y, el, coord});
+  stops.push({i,x:p.x,y:p.y,el});
 });
 
 function refreshStops(){
   stops.forEach(n=>{
-    n.el.className = 'stop';
+    n.el.className='stop';
     if(done.includes(n.i)){
       n.el.classList.add('done');
-    } else if(n.i === currentIndex){
+    }else if(n.i===currentIndex){
       n.el.classList.add('next');
-      const color = MONTH_COLORS[Math.floor(n.i/4)];
-      n.el.style.background = `radial-gradient(circle, ${color} 0%, ${color} 60%, ${shade(color,-20)} 100%)`;
-      n.el.style.boxShadow  = `0 0 0 2px #0008 inset, 0 0 16px ${hexA(color, .65)}, 0 0 34px ${hexA(color, .35)}`;
-    } else if(n.i < currentIndex){
+      const color=MONTH_COLORS[Math.floor(n.i/4)];
+      n.el.style.background=`radial-gradient(circle, ${color} 0%, ${color} 60%, ${shade(color,-20)} 100%)`;
+      n.el.style.boxShadow=`0 0 0 2px #0008 inset, 0 0 16px ${hexA(color,.65)}, 0 0 34px ${hexA(color,.35)}`;
+    }else if(n.i<currentIndex){
       n.el.classList.add('done');
-    } else {
-      n.el.classList.add('locked');
-      n.el.style.boxShadow = '0 0 0 2px #0008 inset';
-      n.el.style.background = '';
+    }else{
+      n.el.classList.add('locked'); n.el.style.boxShadow='0 0 0 2px #0008 inset'; n.el.style.background='';
     }
-    n.coord.textContent = `${n.x.toFixed(1)}%, ${n.y.toFixed(1)}%`;
   });
 }
 
 function hexA(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return `rgba(${r},${g},${b},${a})`;}
 function shade(hex,p){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);const f=v=>Math.max(0,Math.min(255,Math.round(v*(100+p)/100)));return `#${f(r).toString(16).padStart(2,'0')}${f(g).toString(16).padStart(2,'0')}${f(b).toString(16).padStart(2,'0')}`;}
 
-// -------------------------------------------------
-// BOOHA MOVEMENT + CAMERA ZOOM
-// -------------------------------------------------
-let moving = false;
+// Place Booha just outside the first stop (top-left entry)
 function placeBoohaAt(i){
-  const n = stops[i]; if(!n) return;
-  const mazeRect = document.getElementById('maze').getBoundingClientRect();
-  const wx = mazeRect.left + (n.x/100)*mazeRect.width + window.scrollX;
-  const wy = mazeRect.top  + (n.y/100)*mazeRect.height + window.scrollY;
-  booha.style.left = wx + 'px';
-  booha.style.top  = wy + 'px';
+  const n=stops[i]; if(!n) return;
+  const r=mazeEl.getBoundingClientRect();
+  const x=r.left + (n.x/100)*r.width + window.scrollX;
+  const y=r.top  + (n.y/100)*r.height + window.scrollY;
+  booha.style.left=(x-40)+'px'; // just outside to the left
+  booha.style.top =(y-40)+'px'; // slightly above
 }
 
+let moving=false;
 function moveBooha(fromIdx,toIdx,{pauseMs=650}={}){
   return new Promise(resolve=>{
-    moving = true;
-    const from = stops[fromIdx] || stops[0];
-    const to   = stops[toIdx]   || stops[0];
-
-    // interpolate positions in page pixels
-    const mazeRect = document.getElementById('maze').getBoundingClientRect();
-    const sx = mazeRect.left + (from.x/100)*mazeRect.width + window.scrollX;
-    const sy = mazeRect.top  + (from.y/100)*mazeRect.height + window.scrollY;
-    const ex = mazeRect.left + (to.x/100)*mazeRect.width + window.scrollX;
-    const ey = mazeRect.top  + (to.y/100)*mazeRect.height + window.scrollY;
-
-    const dist = Math.hypot(ex-sx, ey-sy);
-    const dur = Math.max(900, Math.min(2200, dist));
-    const t0 = performance.now();
+    moving=true;
+    const from=stops[fromIdx]||stops[0];
+    const to=stops[toIdx]||stops[0];
+    const r=mazeEl.getBoundingClientRect();
+    const sx=r.left+(from.x/100)*r.width+window.scrollX;
+    const sy=r.top +(from.y/100)*r.height+window.scrollY;
+    const ex=r.left+(to.x/100)*r.width+window.scrollX;
+    const ey=r.top +(to.y/100)*r.height+window.scrollY;
+    const dist=Math.hypot(ex-sx,ey-sy);
+    const dur=Math.max(900,Math.min(2400,dist));
+    const t0=performance.now();
 
     function frame(t){
-      const k = Math.min(1,(t-t0)/dur);
-      const ease = k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
-      const x = sx + (ex-sx)*ease;
-      const y = sy + (ey-sy)*ease;
-      booha.style.left = x + 'px';
-      booha.style.top  = y + 'px';
+      const k=Math.min(1,(t-t0)/dur);
+      const e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+      const x=sx+(ex-sx)*e, y=sy+(ey-sy)*e;
+      booha.style.left=x+'px'; booha.style.top=y+'px';
+      // sparkly trail
+      if(k>0 && (Math.random()<.9)) spawnSpark(x + (Math.random()*10-5), y + (Math.random()*10-5), MONTH_COLORS[Math.floor(fromIdx/4)]);
       if(k<1) requestAnimationFrame(frame); else setTimeout(()=>{moving=false;resolve()}, pauseMs);
     }
     requestAnimationFrame(frame);
   });
 }
 
-function zoomTo(i){
-  // center the world on stop i and scale
-  const n = stops[i];
-  const zoom = 1.3;
-  const maze = document.getElementById('maze');
-  const rect = maze.getBoundingClientRect();
-  const cx = (n.x/100)*rect.width - rect.width/2; // px offset from center
-  const cy = (n.y/100)*rect.height - rect.height/2;
-  // convert px offsets to percentages of world because we transform world via translate vars
-  document.documentElement.style.setProperty('--zoom', zoom);
-  document.documentElement.style.setProperty('--tx', (-cx* (zoom-1)/zoom) + 'px');
-  document.documentElement.style.setProperty('--ty', (-cy* (zoom-1)/zoom) + 'px');
-  viewport.classList.add('zoomed');
-}
-function zoomReset(){
-  document.documentElement.style.setProperty('--zoom', 1);
-  document.documentElement.style.setProperty('--tx', '0px');
-  document.documentElement.style.setProperty('--ty', '0px');
-  viewport.classList.remove('zoomed');
+function spawnSpark(x,y,color){
+  const s=document.createElement('i'); s.className='spark'; s.style.color=color||'#ffd400'; s.style.left=x+'px'; s.style.top=y+'px';
+  document.body.appendChild(s); setTimeout(()=>s.remove(),720);
 }
 
 function burstAt(i){
-  const n = stops[i];
-  const mazeRect = document.getElementById('maze').getBoundingClientRect();
-  const bx = mazeRect.left + (n.x/100)*mazeRect.width + window.scrollX;
-  const by = mazeRect.top  + (n.y/100)*mazeRect.height + window.scrollY;
-  const color = MONTH_COLORS[Math.floor(i/4)];
-  for(let k=0;k<10;k++){
-    setTimeout(()=>{
-      const s = document.createElement('i');
-      s.className = 'spark';
-      s.style.color = color;
-      s.style.left = (bx + (Math.random()*40-20)) + 'px';
-      s.style.top  = (by + (Math.random()*40-20)) + 'px';
-      document.body.appendChild(s);
-      setTimeout(()=>s.remove(),720);
-    }, k*30);
-  }
+  const n=stops[i]; const r=mazeEl.getBoundingClientRect();
+  const bx=r.left+(n.x/100)*r.width+window.scrollX; const by=r.top+(n.y/100)*r.height+window.scrollY; const color=MONTH_COLORS[Math.floor(i/4)];
+  for(let k=0;k<12;k++) setTimeout(()=>spawnSpark(bx+(Math.random()*40-20), by+(Math.random()*40-20), color), k*28);
 }
 
-// -------------------------------------------------
-// INTERACTION
-// -------------------------------------------------
-refreshStops();
-placeBoohaAt(currentIndex);
-
-stops.forEach(n=>{
-  n.el.addEventListener('click', async()=>{
-    if(n.i > currentIndex || moving) return;
-    await arriveAt(n.i);
-  });
-});
-
-async function arriveAt(i){
-  // If not at i yet, move from currentIndex to i
-  if(i !== currentIndex){
-    await moveBooha(currentIndex, i);
-  }
-  burstAt(i);
-  zoomTo(i);
-  // Open modal after short delay
-  setTimeout(()=>openWeek(i), 450);
+function zoomTo(i){
+  const n=stops[i]; const zoom=1.3; const rect=mazeEl.getBoundingClientRect();
+  const cx=(n.x/100)*rect.width - rect.width/2; const cy=(n.y/100)*rect.height - rect.height/2;
+  document.documentElement.style.setProperty('--zoom', zoom);
+  document.documentElement.style.setProperty('--tx', (-cx*(zoom-1)/zoom)+'px');
+  document.documentElement.style.setProperty('--ty', (-cy*(zoom-1)/zoom)+'px');
+  viewport.classList.add('zoomed');
 }
+function zoomReset(){ document.documentElement.style.setProperty('--zoom',1); document.documentElement.style.setProperty('--tx','0px'); document.documentElement.style.setProperty('--ty','0px'); viewport.classList.remove('zoomed'); }
 
 function openWeek(i){
-  const monthIdx = Math.floor(i/4), weekIdx = (i%4)+1;
-  titleEl.textContent = `${MONTHS[monthIdx]} — Week ${weekIdx}`;
-  const qs = `?month=${MONTHS[monthIdx].toLowerCase()}&week=${weekIdx}`;
-  deck1.href = `placeholder.html${qs}&deck=1`;
-  deck2.href = `placeholder.html${qs}&deck=2`;
+  const monthIdx=Math.floor(i/4), weekIdx=(i%4)+1; titleEl.textContent=`${MONTHS[monthIdx]} — Week ${weekIdx}`;
+  const qs=`?month=${MONTHS[monthIdx].toLowerCase()}&week=${weekIdx}`; deck1.href=`placeholder.html${qs}&deck=1`; deck2.href=`placeholder.html${qs}&deck=2`;
   modal.classList.add('show');
-
-  const mark = ()=>{
-    if(!done.includes(i)) done.push(i);
-    localStorage.setItem(LS_DONE, JSON.stringify(done));
-    if(currentIndex === i && currentIndex < TOTAL_STOPS-1){
-      currentIndex++;
-      localStorage.setItem(LS_INDEX, String(currentIndex));
-    }
-    refreshStops();
-    modal.classList.remove('show');
-    zoomReset();
-  };
-  deck1.onclick = mark; deck2.onclick = mark;
+  const mark=()=>{ if(!done.includes(i)) done.push(i); localStorage.setItem(LS_DONE, JSON.stringify(done)); if(currentIndex===i && currentIndex<TOTAL_STOPS-1){ currentIndex++; localStorage.setItem(LS_INDEX, String(currentIndex)); }
+    refreshStops(); modal.classList.remove('show'); zoomReset(); };
+  deck1.onclick=mark; deck2.onclick=mark;
 }
 
-[backdrop, closeBtn].forEach(el=>el.addEventListener('click',()=>{modal.classList.remove('show'); zoomReset();}));
-
-// Reset
-resetBtn.addEventListener('click', (e)=>{
-  e.preventDefault();
-  if(confirm('Reset local progress on this device?')){
-    currentIndex = 0; done = [];
-    localStorage.setItem(LS_INDEX,'0');
-    localStorage.setItem(LS_DONE,'[]');
-    refreshStops();
-    placeBoohaAt(currentIndex);
-    zoomReset();
-  }
-});
-
-// TEST autoplay (run through all 48 with zoom)
-let testing = false;
-async function autoplay(){
-  if(testing) return; testing = true; testBtn.textContent = 'RUNNING…';
-  for(let i=currentIndex; i<TOTAL_STOPS; i++){
-    await moveBooha(i===0?0:i-1, i, {pauseMs:200});
-    burstAt(i); zoomTo(i);
-    await sleep(650);
-    // simulate quick modal preview
-    if(!done.includes(i)) done.push(i);
-    localStorage.setItem(LS_DONE, JSON.stringify(done));
-    currentIndex = Math.min(i+1, TOTAL_STOPS-1);
-    localStorage.setItem(LS_INDEX, String(currentIndex));
-    refreshStops();
-    zoomReset();
-    await sleep(200);
-  }
-  testing = false; testBtn.textContent = 'TEST';
+async function arriveAt(i){
+  if(i!==currentIndex){ await moveBooha(currentIndex, i); }
+  // Activate stop, zoom, modal
+  refreshStops(); burstAt(i); zoomTo(i); setTimeout(()=>openWeek(i), 450);
 }
+
+stops.forEach(n=>{ n.el.addEventListener('click', async()=>{ if(n.i>currentIndex||moving) return; await arriveAt(n.i); }); });
+
+// Controls
+resetBtn.addEventListener('click', e=>{ e.preventDefault(); if(confirm('Reset local progress on this device?')){ currentIndex=0; done=[]; localStorage.setItem(LS_INDEX,'0'); localStorage.setItem(LS_DONE,'[]'); refreshStops(); placeBoohaAt(0); zoomReset(); }});
+
+let testing=false; async function autoplay(){ if(testing) return; testing=true; testBtn.textContent='RUNNING…';
+  // move from currentIndex through final
+  for(let i=currentIndex;i<TOTAL_STOPS;i++){
+    await moveBooha(i===0?0:i-1, i, {pauseMs:220}); burstAt(i); zoomTo(i); await sleep(520); // preview zoom
+    if(!done.includes(i)) done.push(i); localStorage.setItem(LS_DONE, JSON.stringify(done)); currentIndex=Math.min(i+1,TOTAL_STOPS-1); localStorage.setItem(LS_INDEX, String(currentIndex)); refreshStops(); zoomReset(); await sleep(160);
+  }
+  testing=false; testBtn.textContent='TEST'; }
 
 testBtn.addEventListener('click', autoplay);
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-// -------------------------------------------------
-// EDIT MODE: drag stops, save coords to localStorage
-// -------------------------------------------------
-let editing = false, drag = null;
-editBtn.addEventListener('click', ()=>{
-  editing = !editing;
-  document.body.classList.toggle('editing', editing);
-  editBtn.textContent = editing? 'EDIT ✓' : 'EDIT';
-});
+// Init
+refreshStops(); placeBoohaAt(currentIndex); // zoomed out by default
 
-stops.forEach(n=>{
-  n.el.addEventListener('pointerdown',(e)=>{
-    if(!editing) return; drag = n; n.el.setPointerCapture(e.pointerId);
-  });
-  n.el.addEventListener('pointermove',(e)=>{
-    if(!editing || drag!==n) return;
-    const maze = document.getElementById('maze');
-    const r = maze.getBoundingClientRect();
-    const x = ((e.clientX - r.left)/r.width)*100;
-    const y = ((e.clientY - r.top)/r.height)*100;
-    n.x = Math.max(0, Math.min(100, x));
-    n.y = Math.max(0, Math.min(100, y));
-    n.el.style.left = n.x + '%';
-    n.el.style.top  = n.y + '%';
-    n.coord.textContent = `${n.x.toFixed(1)}%, ${n.y.toFixed(1)}%`;
-  });
-  n.el.addEventListener('pointerup',()=>{
-    if(!editing || drag!==n) return; drag = null; savePositions();
-  });
-});
-
-function savePositions(){
-  const out = stops.map(n=>({x:+n.x.toFixed(2), y:+n.y.toFixed(2)}));
-  localStorage.setItem(LS_POS, JSON.stringify(out));
-  console.log('Saved positions:', out);
-}
-
-// Keep booha aligned on resize
-window.addEventListener('resize', ()=>{placeBoohaAt(currentIndex)});
+// Keep aligned on resize
+window.addEventListener('resize', ()=>{ if(!moving) placeBoohaAt(currentIndex); });
 </script>
 </body>
 </html>
