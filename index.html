@@ -3,55 +3,63 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Booha Overworld v3 — Smooth Year Path</title>
+<title>Booha Maze — Year Adventure</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+JP:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0b1530;         /* deep navy */
-  --ink:#eaf1ff;        /* text */
-  --muted:#94a3b8;      /* slate */
-  --aqua:#65e7ff;       /* completed */
+  --bg:#0b1530; --ink:#eaf1ff; --muted:#9fb0d5; --aqua:#65e7ff;
+  --zoom:1; --tx:0px; --ty:0px; /* world transform vars */
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{font-family:system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", Helvetica, Arial; background:var(--bg); color:var(--ink)}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",Helvetica,Arial;background:var(--bg);color:var(--ink)}
+
 .header{padding:18px 14px 6px;text-align:center}
 .header h1{font-family:Cinzel,serif;font-weight:900;letter-spacing:.4px;font-size:clamp(22px,3.6vw,34px)}
 .header p{color:var(--muted);font-size:clamp(12px,2.4vw,14px)}
 
-/* Map stage */
-#stage{position:relative; height:calc(100dvh - 150px); max-width:1100px; margin:8px auto 0; border:1px solid #ffffff18; border-radius:20px; overflow:hidden; background:radial-gradient(1600px 700px at 50% 0%, #0f1b3e, #0b1530 40%, #0a1227)}
-#svg{position:absolute; inset:0}
+/* Viewport + World (for zoom/pan) */
+.viewport{position:relative; height:calc(100dvh - 160px); max-width:1100px; margin:8px auto 0; border:1px solid #ffffff18; border-radius:20px; overflow:hidden; background:#081024}
+.viewport::after{ /* cinematic darken during zoom */
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity .35s ease;
+  background:radial-gradient(120% 120% at 50% 50%, transparent 40%, #000 100%);
+}
+.viewport.zoomed::after{opacity:.55}
 
-/* Month gradient underlay ribbon (soft) */
-#path{fill:none; stroke-width:6; stroke-linecap:round; opacity:.22}
-#pathGlow{fill:none; stroke-width:12; filter:url(#blur); opacity:.10}
+.world{position:absolute; left:50%; top:50%; transform:translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(var(--zoom)); transform-origin:center; transition:transform .55s cubic-bezier(.22,.65,.2,1)}
 
-/* Week nodes */
-.node{position:absolute; width:26px; height:26px; border-radius:50%; transform:translate(-50%,-50%); cursor:pointer; border:0; outline:none}
-.node.locked{background:radial-gradient(circle,#29365d 0%, #1c2847 65%, #17223e 100%); box-shadow:0 0 0 2px #0008 inset}
-.node.next{animation:pulse 2.1s ease-in-out infinite}
-.node.done{background:radial-gradient(circle, #c7fbff 0%, #65e7ff 60%, #2bd0ff 100%); box-shadow:0 0 0 2px #00141e inset, 0 0 16px #65e7ffbb, 0 0 34px #2bd0ff55}
-@keyframes pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.2)}}
+/* The forest maze image */
+#maze{display:block; width:1000px; height:auto; background:url('assets/maze.png') center/contain no-repeat; aspect-ratio:1000/1500; /* approximate 2:3; adjust if needed */}
 
-/* Month labels */
-.label{position:absolute; font-family:Cinzel,serif; font-size:12px; color:#cbd5ff; opacity:.85; transform:translate(-50%,-50%)}
+/* Booha sprite */
+#booha{position:absolute; width:64px; height:64px; transform:translate(-50%,-50%); z-index:20; filter:drop-shadow(0 10px 22px #000a)}
+#booha.glow{filter:drop-shadow(0 0 10px #ffd400aa) drop-shadow(0 10px 22px #000a)}
+@keyframes bob{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-6px)}}
+.bobbing{animation:bob 3s ease-in-out infinite}
 
-/* Booha (top-down) */
-#booha{position:absolute; width:34px; height:34px; border-radius:50%; transform:translate(-50%,-50%); z-index:10; background:radial-gradient(circle at 35% 35%, #fffef0 0%, #fff87a 40%, #ffd400 78%, #ffb300 100%); box-shadow:0 0 12px #ffd40099, 0 10px 28px #000a; animation:shimmer 4s ease-in-out infinite}
-#booha::before, #booha::after{content:""; position:absolute; top:12px; width:6px; height:6px; border-radius:50%; background:#000}
-#booha::before{left:10px} #booha::after{right:10px}
-@keyframes shimmer{0%,100%{box-shadow:0 0 12px #ffd40066, 0 10px 28px #000a}50%{box-shadow:0 0 20px #ffd400cc, 0 10px 28px #000a}}
-#shadow{position:absolute; width:42px; height:12px; background:radial-gradient(ellipse at center, #0009 0%, transparent 70%); transform:translate(-50%,-50%); filter:blur(2px); opacity:.6; z-index:5}
+/* Week stop points */
+.stop{position:absolute; width:18px; height:18px; border-radius:50%; transform:translate(-50%,-50%); pointer-events:auto; cursor:pointer; opacity:.9}
+.stop.locked{background:radial-gradient(circle,#29365d 0%, #1c2847 65%, #17223e 100%); box-shadow:0 0 0 2px #0008 inset}
+.stop.next{animation:pulse 2s ease-in-out infinite}
+.stop.done{background:radial-gradient(circle,#c7fbff 0%, #65e7ff 60%, #2bd0ff 100%); box-shadow:0 0 0 2px #00141e inset, 0 0 14px #65e7ffbb, 0 0 30px #2bd0ff55}
+@keyframes pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
 
-/* Sparkle trail */
-.spark{position:absolute; width:6px; height:6px; border-radius:50%; pointer-events:none; background:radial-gradient(circle at 35% 35%, #fff, #ffe66d 60%, transparent 72%); box-shadow:0 0 10px #ffd400cc; animation:spark .7s ease-out forwards}
+/* Burst particles */
+.spark{position:absolute; width:6px; height:6px; border-radius:50%; pointer-events:none; background:radial-gradient(circle at 35% 35%, #fff, #ffe66d 60%, transparent 72%); box-shadow:0 0 10px currentColor; animation:spark .7s ease-out forwards}
 @keyframes spark{0%{transform:scale(.85);opacity:1}60%{transform:scale(1.1)}100%{transform:scale(.2) translateY(6px);opacity:0}}
 
+/* Footer + buttons */
+.footer{padding:10px 12px; text-align:center; color:#9fb0d5; font-size:12px}
+.footer a{color:#cfe0ff}
+#test,#edit{position:fixed; right:14px; z-index:60; padding:10px 14px; font-weight:700; border-radius:12px; border:1px solid #ffffff26; background:#122045; color:#e5edff; cursor:pointer}
+#test{bottom:14px}
+#edit{bottom:56px}
+#test:hover,#edit:hover{background:#1a2b5e}
+
 /* Modal */
-.modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:50}
+.modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:80}
 .modal.show{display:flex}
-.modal .backdrop{position:absolute; inset:0; background:#0008}
+.modal .backdrop{position:absolute; inset:0; background:#0006}
 .modal .card{position:relative; width:min(680px,92vw); border-radius:18px; border:1px solid #ffffff22; padding:16px; background:linear-gradient(180deg,#101d42,#0b1530); box-shadow:0 20px 50px #000a}
 .modal h2{font-family:Cinzel,serif; font-size:18px}
 .modal p{color:#c7d2fe; margin:6px 0 12px}
@@ -61,39 +69,30 @@ body{font-family:system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", Hel
 .btn.primary{border-color:#ffe06644; background:linear-gradient(180deg,#1a2550,#122045)}
 .close{position:absolute; right:10px; top:10px; border:none; background:transparent; color:#cbd5e1; font-size:20px; cursor:pointer}
 
-/* Footer + TEST */
-.footer{padding:10px 12px; text-align:center; color:#9fb0d5; font-size:12px}
-.footer a{color:#cfe0ff}
-#test{position:fixed; right:14px; bottom:14px; z-index:60; padding:10px 14px; font-weight:700; border-radius:12px; border:1px solid #ffffff26; background:#122045; color:#e5edff; cursor:pointer}
-#test:hover{background:#1a2b5e}
-
+/* Edit helpers */
+.coord{position:absolute; transform:translate(-50%,-100%); background:#0b1530; color:#cfe0ff; font-size:10px; padding:2px 6px; border-radius:8px; border:1px solid #ffffff22; display:none}
+.editing .coord{display:block}
+.editing .stop{outline:1px dashed #7dd3fc}
 </style>
 </head>
 <body>
   <header class="header">
-    <h1>Booha Overworld — The Year Flows</h1>
-    <p>Guide Booha along a free‑flowing path from January to December. Progress saves on this device.</p>
+    <h1>Booha Maze — Year Adventure</h1>
+    <p>Top‑down forest maze. Booha enters at the top‑left, finishes bottom‑right. 48 weekly stops with zoom + modal.</p>
   </header>
 
-  <main id="stage">
-    <svg id="svg" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="yearGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <!-- stops are added by JS using monthly colors -->
-        </linearGradient>
-        <filter id="blur"><feGaussianBlur stdDeviation="6" /></filter>
-      </defs>
-      <path id="pathGlow" stroke="url(#yearGrad)" d="" />
-      <path id="path" stroke="url(#yearGrad)" d="" />
-    </svg>
-    <!-- labels and nodes injected here -->
-  </main>
+  <section class="viewport" id="viewport">
+    <div class="world" id="world">
+      <div id="maze"></div>
+      <!-- Stops + Booha injected by JS -->
+    </div>
+  </section>
 
   <div class="footer">Bryan's English School — Boo‑riculum Adventure • <a href="#" id="reset">reset progress</a></div>
+  <button id="edit" title="Toggle edit/drag mode">EDIT</button>
   <button id="test" title="Auto-play the year">TEST</button>
 
-  <div id="shadow"></div>
-  <div id="booha" aria-hidden="true"></div>
+  <img id="booha" class="bobbing glow" src="assets/mazebooha.png" alt="Booha" />
 
   <!-- Modal -->
   <div class="modal" id="modal" aria-hidden="true">
@@ -110,233 +109,221 @@ body{font-family:system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", Hel
   </div>
 
 <script>
-// --------------------------------------
+// -------------------------------------------------
 // CONFIG
-// --------------------------------------
+// -------------------------------------------------
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const MONTH_COLORS = [
-  '#cddfff', '#ffb6c1', '#ffda8a', '#a7f5b1', '#7fdfff', '#ffe066', '#ff9edb', '#f8b54c', '#d6b3ff', '#ff9851', '#ffd6a1', '#fff4c7'
-];
-const ROWS = 12, COLS = 4; // 12 months, 4 weeks each
-const TOTAL = ROWS * COLS; // 48 nodes
+const MONTH_COLORS = ['#cddfff','#ffb6c1','#ffda8a','#a7f5b1','#7fdfff','#ffe066','#ff9edb','#f8b54c','#d6b3ff','#ff9851','#ffd6a1','#fff4c7'];
+const TOTAL_STOPS = 48; // 4 per month
 
-const LS_INDEX = 'booha_overworld_v3_index';
-const LS_DONE  = 'booha_overworld_v3_done';
+const LS_INDEX = 'booha_maze_index_v1';
+const LS_DONE  = 'booha_maze_done_v1';
+const LS_POS   = 'booha_maze_positions_v1'; // editable positions
+
 let currentIndex = parseInt(localStorage.getItem(LS_INDEX) || '0', 10);
 let done = JSON.parse(localStorage.getItem(LS_DONE) || '[]');
+let POS = JSON.parse(localStorage.getItem(LS_POS) || 'null');
 
-// Elements
-const stage = document.getElementById('stage');
-const svg = document.getElementById('svg');
-const pathEl = document.getElementById('path');
-const pathGlowEl = document.getElementById('pathGlow');
-const grad = document.getElementById('yearGrad');
+// If no saved positions, seed a reasonable serpentine along the maze image using percentage guesses.
+if(!Array.isArray(POS) || POS.length !== TOTAL_STOPS){
+  POS = Array.from({length:TOTAL_STOPS}, (_,i)=>{
+    const row = Math.floor(i/8); // 6 rows * 8 = 48
+    const tInRow = i%8;
+    const y = 6 + row* ( (88)/(6-1) ); // spread 6 rows from 6%..94%
+    const x = (row%2===0) ? (6 + tInRow*( (88)/(8-1) )) : (94 - tInRow*( (88)/(8-1) ));
+    return {x, y};
+  });
+}
+
+// -------------------------------------------------
+// ELEMENTS
+// -------------------------------------------------
+const viewport = document.getElementById('viewport');
+const world = document.getElementById('world');
 const booha = document.getElementById('booha');
-const shadow = document.getElementById('shadow');
+const resetBtn = document.getElementById('reset');
+const testBtn = document.getElementById('test');
+const editBtn = document.getElementById('edit');
+
 const modal = document.getElementById('modal');
 const backdrop = document.getElementById('backdrop');
 const closeBtn = document.getElementById('close');
 const titleEl = document.getElementById('title');
 const deck1 = document.getElementById('deck1');
 const deck2 = document.getElementById('deck2');
-const resetBtn = document.getElementById('reset');
-const testBtn = document.getElementById('test');
 
-// --------------------------------------
-// Build free‑flowing path (Bézier chain)
-// --------------------------------------
-function buildPath(){
-  const W = 1000, H = 600; // svg viewBox
-  // Seed control points for a gentle S‑curve river through the canvas.
-  const pts = [
-    [40, 40],   [200, 60],  [340, 80],  [480, 70],
-    [620, 60],  [760, 90],  [900, 120], [860, 200],
-    [720, 260], [560, 300], [420, 340], [300, 400],
-    [200, 470], [120, 520], [80, 560],  [140, 580],
-    [300, 560], [460, 520], [620, 480], [760, 420],
-    [880, 360], [920, 300], [880, 240], [760, 180],
-    [620, 160], [480, 180], [340, 220], [220, 260],
-    [140, 320], [120, 380], [160, 440], [260, 500],
-    [420, 540], [600, 530], [760, 500], [880, 460]
-  ];
-  // Convert to smooth cubic segments
-  let d = `M ${pts[0][0]},${pts[0][1]}`;
-  for(let i=1;i<pts.length-2;i+=2){
-    const [c1x,c1y] = pts[i];
-    const [c2x,c2y] = pts[i+1];
-    const [ex,ey]   = pts[i+2];
-    d += ` C ${c1x},${c1y} ${c2x},${c2y} ${ex},${ey}`;
-  }
-  pathEl.setAttribute('d', d);
-  pathGlowEl.setAttribute('d', d);
-  // Gradient stops for months
-  grad.innerHTML = '';
-  for(let m=0;m<12;m++){
-    const start = (m/12)*100;
-    const end   = ((m+1)/12)*100;
-    const s = document.createElementNS('http://www.w3.org/2000/svg','stop');
-    s.setAttribute('offset', start+'%'); s.setAttribute('stop-color', MONTH_COLORS[m]); grad.appendChild(s);
-    const e = document.createElementNS('http://www.w3.org/2000/svg','stop');
-    e.setAttribute('offset', end+'%'); e.setAttribute('stop-color', MONTH_COLORS[m]); grad.appendChild(e);
-  }
-}
+// -------------------------------------------------
+// BUILD STOPS
+// -------------------------------------------------
+const stops = []; // {i, x%, y%, el, coord}
+POS.forEach((p,i)=>{
+  const el = document.createElement('button');
+  el.className = 'stop locked';
+  el.style.left = p.x + '%';
+  el.style.top  = p.y + '%';
+  el.title = `${MONTHS[Math.floor(i/4)]} — Week ${(i%4)+1}`;
+  world.appendChild(el);
+  const coord = document.createElement('span');
+  coord.className = 'coord';
+  coord.textContent = `${p.x.toFixed(1)}%, ${p.y.toFixed(1)}%`;
+  el.appendChild(coord);
+  stops.push({i, x:p.x, y:p.y, el, coord});
+});
 
-buildPath();
-
-// Compute node positions along path
-const pathLen = pathEl.getTotalLength();
-const nodes = []; // {i, monthIdx, weekIdx, x, y, el, color}
-for(let i=0;i<TOTAL;i++){
-  const t = (i+1) / (TOTAL+1); // spread along path, avoid extreme ends
-  const pt = pathEl.getPointAtLength(t*pathLen);
-  const monthIdx = Math.floor(i/4);
-  const weekIdx = (i % 4) + 1;
-  const color = MONTH_COLORS[monthIdx];
-  // Create node
-  const node = document.createElement('button');
-  node.className = 'node locked';
-  node.style.left = (pt.x / 10) + '%';
-  node.style.top  = (pt.y / 6) + '%';
-  node.title = `${MONTHS[monthIdx]} — Week ${weekIdx}`;
-  stage.appendChild(node);
-  nodes.push({i, monthIdx, weekIdx, x:pt.x, y:pt.y, el:node, color});
-  // Month label only once per month, positioned slightly before first node of that month
-  if(weekIdx===1){
-    const lblPt = pathEl.getPointAtLength(((i+0.3)/(TOTAL+1))*pathLen);
-    const label = document.createElement('div');
-    label.className = 'label';
-    label.textContent = MONTHS[monthIdx];
-    label.style.left = (lblPt.x/10) + '%';
-    label.style.top  = (lblPt.y/6 - 3) + '%';
-    stage.appendChild(label);
-  }
-}
-
-// Update node visual states
-function refreshNodes(){
-  nodes.forEach(n=>{
-    n.el.className = 'node';
+function refreshStops(){
+  stops.forEach(n=>{
+    n.el.className = 'stop';
     if(done.includes(n.i)){
       n.el.classList.add('done');
     } else if(n.i === currentIndex){
       n.el.classList.add('next');
-      // tint "next" using month color
-      n.el.style.background = `radial-gradient(circle, ${n.color} 0%, ${n.color} 60%, ${shade(n.color,-20)} 100%)`;
-      n.el.style.boxShadow  = `0 0 0 2px #0008 inset, 0 0 16px ${hexA(n.color, .65)}, 0 0 34px ${hexA(n.color, .35)}`;
+      const color = MONTH_COLORS[Math.floor(n.i/4)];
+      n.el.style.background = `radial-gradient(circle, ${color} 0%, ${color} 60%, ${shade(color,-20)} 100%)`;
+      n.el.style.boxShadow  = `0 0 0 2px #0008 inset, 0 0 16px ${hexA(color, .65)}, 0 0 34px ${hexA(color, .35)}`;
     } else if(n.i < currentIndex){
       n.el.classList.add('done');
     } else {
       n.el.classList.add('locked');
       n.el.style.boxShadow = '0 0 0 2px #0008 inset';
+      n.el.style.background = '';
     }
+    n.coord.textContent = `${n.x.toFixed(1)}%, ${n.y.toFixed(1)}%`;
   });
 }
 
-function hexA(hex, a){
-  // hex like #rrggbb
-  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-  return `rgba(${r},${g},${b},${a})`;
-}
-function shade(hex, pct){
-  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-  const f = (v)=>Math.max(0, Math.min(255, Math.round(v*(100+pct)/100)));
-  return `#${f(r).toString(16).padStart(2,'0')}${f(g).toString(16).padStart(2,'0')}${f(b).toString(16).padStart(2,'0')}`;
+function hexA(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return `rgba(${r},${g},${b},${a})`;}
+function shade(hex,p){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);const f=v=>Math.max(0,Math.min(255,Math.round(v*(100+p)/100)));return `#${f(r).toString(16).padStart(2,'0')}${f(g).toString(16).padStart(2,'0')}${f(b).toString(16).padStart(2,'0')}`;}
+
+// -------------------------------------------------
+// BOOHA MOVEMENT + CAMERA ZOOM
+// -------------------------------------------------
+let moving = false;
+function placeBoohaAt(i){
+  const n = stops[i]; if(!n) return;
+  const mazeRect = document.getElementById('maze').getBoundingClientRect();
+  const wx = mazeRect.left + (n.x/100)*mazeRect.width + window.scrollX;
+  const wy = mazeRect.top  + (n.y/100)*mazeRect.height + window.scrollY;
+  booha.style.left = wx + 'px';
+  booha.style.top  = wy + 'px';
 }
 
-// Booha placement & movement
-function placeBooha(i){
-  const n = nodes[i] || nodes[0];
-  const x = n.x, y = n.y; // svg coords
-  const rect = stage.getBoundingClientRect();
-  const bx = rect.left + (x/1000)*rect.width + window.scrollX;
-  const by = rect.top  + (y/600)*rect.height + window.scrollY;
-  booha.style.left = bx + 'px';
-  booha.style.top  = by + 'px';
-  shadow.style.left = bx + 'px';
-  shadow.style.top  = (by + 18) + 'px';
-}
-
-function moveBooha(fromIdx, toIdx, {pauseMs=700}={}){
+function moveBooha(fromIdx,toIdx,{pauseMs=650}={}){
   return new Promise(resolve=>{
-    const startLen = ((fromIdx+1)/(TOTAL+1))*pathLen;
-    const endLen   = ((toIdx+1)/(TOTAL+1))*pathLen;
-    const dist = Math.abs(endLen - startLen);
-    const dur = Math.max(900, Math.min(2600, dist*1.0)); // dynamic duration based on distance
+    moving = true;
+    const from = stops[fromIdx] || stops[0];
+    const to   = stops[toIdx]   || stops[0];
+
+    // interpolate positions in page pixels
+    const mazeRect = document.getElementById('maze').getBoundingClientRect();
+    const sx = mazeRect.left + (from.x/100)*mazeRect.width + window.scrollX;
+    const sy = mazeRect.top  + (from.y/100)*mazeRect.height + window.scrollY;
+    const ex = mazeRect.left + (to.x/100)*mazeRect.width + window.scrollX;
+    const ey = mazeRect.top  + (to.y/100)*mazeRect.height + window.scrollY;
+
+    const dist = Math.hypot(ex-sx, ey-sy);
+    const dur = Math.max(900, Math.min(2200, dist));
     const t0 = performance.now();
-    const dir = endLen > startLen ? 1 : -1;
 
     function frame(t){
-      const k = Math.min(1, (t - t0) / dur);
-      const eased = k<.5 ? 2*k*k : 1 - Math.pow(-2*k+2, 2)/2; // easeInOutQuad
-      const curLen = startLen + dir * dist * eased;
-      const p = pathEl.getPointAtLength(curLen);
-      const rect = stage.getBoundingClientRect();
-      const bx = rect.left + (p.x/1000)*rect.width + window.scrollX;
-      const by = rect.top  + (p.y/600)*rect.height + window.scrollY;
-      // trail
-      if(k>0){ spawnSpark(bx + (Math.random()*10-5), by + (Math.random()*10-5)); }
-      booha.style.left = bx + 'px';
-      booha.style.top  = by + 'px';
-      shadow.style.left = bx + 'px';
-      shadow.style.top  = (by + 18) + 'px';
-      if(k<1) requestAnimationFrame(frame); else setTimeout(resolve, pauseMs);
+      const k = Math.min(1,(t-t0)/dur);
+      const ease = k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+      const x = sx + (ex-sx)*ease;
+      const y = sy + (ey-sy)*ease;
+      booha.style.left = x + 'px';
+      booha.style.top  = y + 'px';
+      if(k<1) requestAnimationFrame(frame); else setTimeout(()=>{moving=false;resolve()}, pauseMs);
     }
     requestAnimationFrame(frame);
   });
 }
 
-function spawnSpark(x,y,color){
-  const s = document.createElement('i');
-  s.className = 'spark';
-  if(color) s.style.boxShadow = `0 0 10px ${hexA(color,.9)}`;
-  s.style.left = x + 'px';
-  s.style.top  = y + 'px';
-  document.body.appendChild(s);
-  setTimeout(()=>s.remove(), 720);
+function zoomTo(i){
+  // center the world on stop i and scale
+  const n = stops[i];
+  const zoom = 1.3;
+  const maze = document.getElementById('maze');
+  const rect = maze.getBoundingClientRect();
+  const cx = (n.x/100)*rect.width - rect.width/2; // px offset from center
+  const cy = (n.y/100)*rect.height - rect.height/2;
+  // convert px offsets to percentages of world because we transform world via translate vars
+  document.documentElement.style.setProperty('--zoom', zoom);
+  document.documentElement.style.setProperty('--tx', (-cx* (zoom-1)/zoom) + 'px');
+  document.documentElement.style.setProperty('--ty', (-cy* (zoom-1)/zoom) + 'px');
+  viewport.classList.add('zoomed');
+}
+function zoomReset(){
+  document.documentElement.style.setProperty('--zoom', 1);
+  document.documentElement.style.setProperty('--tx', '0px');
+  document.documentElement.style.setProperty('--ty', '0px');
+  viewport.classList.remove('zoomed');
 }
 
-function burstAt(n){
-  // Explode tiny particles in month color
-  for(let i=0;i<10;i++){
+function burstAt(i){
+  const n = stops[i];
+  const mazeRect = document.getElementById('maze').getBoundingClientRect();
+  const bx = mazeRect.left + (n.x/100)*mazeRect.width + window.scrollX;
+  const by = mazeRect.top  + (n.y/100)*mazeRect.height + window.scrollY;
+  const color = MONTH_COLORS[Math.floor(i/4)];
+  for(let k=0;k<10;k++){
     setTimeout(()=>{
-      const rect = stage.getBoundingClientRect();
-      const bx = rect.left + (n.x/1000)*rect.width + (Math.random()*40-20) + window.scrollX;
-      const by = rect.top  + (n.y/600)*rect.height + (Math.random()*40-20) + window.scrollY;
-      spawnSpark(bx, by, n.color);
-    }, i*30);
+      const s = document.createElement('i');
+      s.className = 'spark';
+      s.style.color = color;
+      s.style.left = (bx + (Math.random()*40-20)) + 'px';
+      s.style.top  = (by + (Math.random()*40-20)) + 'px';
+      document.body.appendChild(s);
+      setTimeout(()=>s.remove(),720);
+    }, k*30);
   }
 }
 
-// Click handling: open modal only on current or completed nodes
-nodes.forEach(n=>{
-  n.el.addEventListener('click', ()=>{
-    if(n.i > currentIndex) return; // future locked
-    openWeek(n);
+// -------------------------------------------------
+// INTERACTION
+// -------------------------------------------------
+refreshStops();
+placeBoohaAt(currentIndex);
+
+stops.forEach(n=>{
+  n.el.addEventListener('click', async()=>{
+    if(n.i > currentIndex || moving) return;
+    await arriveAt(n.i);
   });
 });
 
-function openWeek(n){
-  titleEl.textContent = `${MONTHS[n.monthIdx]} — Week ${n.weekIdx}`;
-  const qs = `?month=${MONTHS[n.monthIdx].toLowerCase()}&week=${n.weekIdx}`;
+async function arriveAt(i){
+  // If not at i yet, move from currentIndex to i
+  if(i !== currentIndex){
+    await moveBooha(currentIndex, i);
+  }
+  burstAt(i);
+  zoomTo(i);
+  // Open modal after short delay
+  setTimeout(()=>openWeek(i), 450);
+}
+
+function openWeek(i){
+  const monthIdx = Math.floor(i/4), weekIdx = (i%4)+1;
+  titleEl.textContent = `${MONTHS[monthIdx]} — Week ${weekIdx}`;
+  const qs = `?month=${MONTHS[monthIdx].toLowerCase()}&week=${weekIdx}`;
   deck1.href = `placeholder.html${qs}&deck=1`;
   deck2.href = `placeholder.html${qs}&deck=2`;
   modal.classList.add('show');
 
   const mark = ()=>{
-    if(!done.includes(n.i)) done.push(n.i);
+    if(!done.includes(i)) done.push(i);
     localStorage.setItem(LS_DONE, JSON.stringify(done));
-    if(currentIndex === n.i && currentIndex < TOTAL-1){
+    if(currentIndex === i && currentIndex < TOTAL_STOPS-1){
       currentIndex++;
       localStorage.setItem(LS_INDEX, String(currentIndex));
     }
-    refreshNodes();
+    refreshStops();
     modal.classList.remove('show');
+    zoomReset();
   };
   deck1.onclick = mark; deck2.onclick = mark;
 }
 
-// Close modal
-[backdrop, closeBtn].forEach(el=>el.addEventListener('click',()=>modal.classList.remove('show')));
+[backdrop, closeBtn].forEach(el=>el.addEventListener('click',()=>{modal.classList.remove('show'); zoomReset();}));
 
 // Reset
 resetBtn.addEventListener('click', (e)=>{
@@ -345,39 +332,75 @@ resetBtn.addEventListener('click', (e)=>{
     currentIndex = 0; done = [];
     localStorage.setItem(LS_INDEX,'0');
     localStorage.setItem(LS_DONE,'[]');
-    refreshNodes();
-    placeBooha(0);
+    refreshStops();
+    placeBoohaAt(currentIndex);
+    zoomReset();
   }
 });
 
-// TEST autoplay (smooth, with pauses and bursts)
+// TEST autoplay (run through all 48 with zoom)
 let testing = false;
 async function autoplay(){
   if(testing) return; testing = true; testBtn.textContent = 'RUNNING…';
-  // start from currentIndex through end
-  for(let i=currentIndex; i<TOTAL; i++){
-    const n = nodes[i];
-    // move to node i
-    await moveBooha(i===0?0:i-1, i, {pauseMs:600});
-    burstAt(n);
-    // mark done visually (no modal during test)
+  for(let i=currentIndex; i<TOTAL_STOPS; i++){
+    await moveBooha(i===0?0:i-1, i, {pauseMs:200});
+    burstAt(i); zoomTo(i);
+    await sleep(650);
+    // simulate quick modal preview
     if(!done.includes(i)) done.push(i);
     localStorage.setItem(LS_DONE, JSON.stringify(done));
-    currentIndex = Math.min(i+1, TOTAL-1);
+    currentIndex = Math.min(i+1, TOTAL_STOPS-1);
     localStorage.setItem(LS_INDEX, String(currentIndex));
-    refreshNodes();
+    refreshStops();
+    zoomReset();
+    await sleep(200);
   }
   testing = false; testBtn.textContent = 'TEST';
 }
 
 testBtn.addEventListener('click', autoplay);
 
-// Init
-refreshNodes();
-placeBooha(currentIndex);
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-// Keep aligned on resize
-window.addEventListener('resize', ()=>placeBooha(currentIndex));
+// -------------------------------------------------
+// EDIT MODE: drag stops, save coords to localStorage
+// -------------------------------------------------
+let editing = false, drag = null;
+editBtn.addEventListener('click', ()=>{
+  editing = !editing;
+  document.body.classList.toggle('editing', editing);
+  editBtn.textContent = editing? 'EDIT ✓' : 'EDIT';
+});
+
+stops.forEach(n=>{
+  n.el.addEventListener('pointerdown',(e)=>{
+    if(!editing) return; drag = n; n.el.setPointerCapture(e.pointerId);
+  });
+  n.el.addEventListener('pointermove',(e)=>{
+    if(!editing || drag!==n) return;
+    const maze = document.getElementById('maze');
+    const r = maze.getBoundingClientRect();
+    const x = ((e.clientX - r.left)/r.width)*100;
+    const y = ((e.clientY - r.top)/r.height)*100;
+    n.x = Math.max(0, Math.min(100, x));
+    n.y = Math.max(0, Math.min(100, y));
+    n.el.style.left = n.x + '%';
+    n.el.style.top  = n.y + '%';
+    n.coord.textContent = `${n.x.toFixed(1)}%, ${n.y.toFixed(1)}%`;
+  });
+  n.el.addEventListener('pointerup',()=>{
+    if(!editing || drag!==n) return; drag = null; savePositions();
+  });
+});
+
+function savePositions(){
+  const out = stops.map(n=>({x:+n.x.toFixed(2), y:+n.y.toFixed(2)}));
+  localStorage.setItem(LS_POS, JSON.stringify(out));
+  console.log('Saved positions:', out);
+}
+
+// Keep booha aligned on resize
+window.addEventListener('resize', ()=>{placeBoohaAt(currentIndex)});
 </script>
 </body>
 </html>
